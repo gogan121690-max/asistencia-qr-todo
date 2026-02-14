@@ -512,10 +512,9 @@
             if (!isFirebaseEnabled) return;
             
             // Cargar listas desde Firebase
-db.collection('listas').onSnapshot((snapshot) => {
-    console.log("📥 Recibiendo listas desde Firebase. Total docs:", snapshot.size);
-    
-    snapshot.forEach((doc) => {
+			db.collection('listas').onSnapshot((snapshot) => {
+   		 console.log("📥 Recibiendo listas desde Firebase. Total docs:", snapshot.size);
+    	snapshot.forEach((doc) => {
         const data = doc.data();
         console.log("📋 Lista encontrada:", data.nombre, "con", data.alumnos ? data.alumnos.length : 0, "alumnos");
         listas[data.nombre] = data.alumnos;
@@ -528,7 +527,6 @@ db.collection('listas').onSnapshot((snapshot) => {
     displayListas();
     loadListaSelects();
 });
-
             
             // Cargar actividades
             db.collection('actividades').onSnapshot((snapshot) => {
