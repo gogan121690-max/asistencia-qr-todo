@@ -419,12 +419,9 @@
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             
-            db.enablePersistence()
-                .then(() => {
-                    console.log("✅ Modo offline activado");
-                    isFirebaseEnabled = true;
-                    updateSyncStatus('online');
-                })
+            // SIN persistencia para evitar conflictos
+isFirebaseEnabled = true;
+updateSyncStatus('online');
                 .catch((err) => {
                     console.warn("⚠️ Persistencia no disponible:", err);
                     isFirebaseEnabled = true;
