@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Asistencia QR</title>
+    
+    <link rel="manifest" href="./manifest-asistencia.json">
+    <link rel="icon" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <!-- Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        
+        .sync-online { background: #d4edda; color: #155724; }
+        .sync-offline { background: #f8d7da; color: #721c24; }
+        .sync-syncing { background: #fff3cd; color: #856404; }
+        
+        h1 { color: #667eea; font-size: 1.8em; }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            border: none;
+            background: #f0f0f0;
+            color: #333;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .form-group { margin-bottom: 20px; }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-secondary { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .btn-success { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .btn-warning { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .btn-small { padding: 6px 12px; font-size: 0.9em; }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .table-wrapper::-webkit-scrollbar { height: 10px; }
+        .table-wrapper::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: #667eea; border-radius: 10px; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 600px;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+        }
+        
+        tbody tr:hover { background: #f8f9fa; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.2em;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .alert.show { display: block; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        
+        #reader, #readerList, #readerSearch {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        
+        .scanner-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.4em; }
+            .header { padding: 15px; }
+            .content { padding: 15px; }
+            table { font-size: 0.9em; }
+            th, td { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📋 Asistencia QR</h1>
+            <p style="color: #666; margin-top: 5px;">Sistema de Control de Asistencia</p>
+        </div>
+        <div class="sync-status" id="syncStatus">
+            <span id="syncIcon">🔴</span>
+            <span id="syncText">Iniciando...</span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('scanner')">📷 Escanear</button>
+        <button class="tab" onclick="switchTab('list')">📝 Pase de Lista</button>
+        <button class="tab" onclick="switchTab('records')">📊 Registros</button>
+        <button class="tab" onclick="switchTab('search')">🔍 Buscar</button>
+    </div>
+
+    <div class="content">
+        <div id="alert" class="alert"></div>
+
+        <!-- TAB: ESCANEAR -->
+        <div id="tab-scanner" class="tab-content active">
+            <h2 style="text-align: center;">📷 Escáner de Asistencia</h2>
+            
+            <div class="form-group">
+                <label>Filtrar por Grupo (Opcional):</label>
+                <select id="scannerGroupFilter">
+                    <option value="">Todos los grupos</option>
+                </select>
+            </div>
+
+            <div id="reader"></div>
+            
+            <div class="scanner-controls">
+                <button class="btn" id="startScanBtn" onclick="startScanner()">▶️ Iniciar</button>
+                <button class="btn btn-secondary" id="stopScanBtn" onclick="stopScanner()" disabled>⏹️ Detener</button>
+            </div>
+        </div>
+
+        <!-- TAB: PASE DE LISTA -->
+        <div id="tab-list" class="tab-content">
+            <h2>📝 Crear Pase de Lista</h2>
+            
+            <div id="createListForm">
+                <h3>Nueva Lista</h3>
+                <div class="form-group">
+                    <label>Grado:</label>
+                    <input type="text" id="listGrade" placeholder="Ej: 3" maxlength="2">
+                </div>
+                <div class="form-group">
+                    <label>Grupo:</label>
+                    <input type="text" id="listGroup" placeholder="Ej: A" maxlength="2">
+                </div>
+                <div class="form-group">
+                    <label>Materia:</label>
+                    <input type="text" id="listSubject" placeholder="Ej: Diseño Digital">
+                </div>
+                <div class="form-group">
+                    <label>Escuela:</label>
+                    <input type="text" id="listSchool" placeholder="Ej: EPO 67">
+                </div>
+                <div class="form-group">
+                    <label>Nombre de la Lista (Generado Automáticamente):</label>
+                    <input type="text" id="listNamePreview" readonly style="background:#f0f0f0; color:#667eea; font-weight:bold;">
+                </div>
+                <div class="scanner-controls">
+                    <button class="btn" onclick="createNewListAuto()">➕ Crear Lista</button>
+                </div>
+            </div>
+
+            <div id="listSelectContainer" style="display:none; margin: 30px 0;">
+                <div class="form-group">
+                    <label>Seleccionar Lista:</label>
+                    <select id="listSelect" onchange="loadSelectedList()">
+                        <option value="">-- Selecciona una lista --</option>
+                    </select>
+                </div>
+                <button class="btn btn-secondary" onclick="deleteCurrentList()">🗑️ Eliminar Lista</button>
+            </div>
+
+            <div id="listScannerSection" style="display:none;">
+                <h3 style="text-align:center;">Lista: <span id="currentListName" style="color:#667eea;"></span></h3>
+                <div id="readerList"></div>
+                <div class="scanner-controls">
+                    <button class="btn" id="startListBtn" onclick="startListScanner()">▶️ Iniciar</button>
+                    <button class="btn btn-secondary" id="stopListBtn" onclick="stopListScanner()" disabled>⏹️ Detener</button>
+                    <button class="btn btn-success" onclick="exportListToExcel()">📥 Exportar</button>
+                </div>
+                <div id="listStudentsContainer"></div>
+            </div>
+        </div>
+
+        <!-- TAB: REGISTROS -->
+        <div id="tab-records" class="tab-content">
+            <h2>📊 Registros de Asistencia</h2>
+            <div class="scanner-controls">
+                <button class="btn btn-success" onclick="exportToExcel()">📥 Exportar</button>
+                <button class="btn btn-warning" onclick="removeDuplicates()">🔄 Eliminar Duplicados</button>
+                <button class="btn btn-secondary" onclick="clearAllRecords()">🗑️ Limpiar Todo</button>
+            </div>
+            <div class="table-wrapper">
+                <div id="recordsTable"></div>
+            </div>
+        </div>
+
+        <!-- TAB: BUSCAR -->
+        <div id="tab-search" class="tab-content">
+            <h2 style="text-align:center;">🔍 Buscar Alumno</h2>
+            <div id="readerSearch"></div>
+            <div class="scanner-controls">
+                <button class="btn" id="startSearchBtn" onclick="startSearchScanner()">▶️ Iniciar</button>
+                <button class="btn btn-secondary" id="stopSearchBtn" onclick="stopSearchScanner()" disabled>⏹️ Detener</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+
+    <script src="./asistencia-functions.js"></script>
+    <script>
+
+	// Your web app's Firebase configuration
+	const firebaseConfig = {
+  	    apiKey: "AIzaSyDSKcyeDVOZRw2CkMrGapYymdguYllJta4",
+  	    authDomain: "asistencia-qr-38271.firebaseapp.com",
+  	    projectId: "asistencia-qr-38271",
+  	    storageBucket: "asistencia-qr-38271.firebasestorage.app",
+ 	    messagingSenderId: "749102163562",
+ 	    appId: "1:749102163562:web:101593e4fcb6cccbafcc13"
+	};
+
+        let db;
+        let isFirebaseEnabled = false;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            
+            db.enablePersistence()
+                .then(() => {
+                    console.log("✅ Modo offline activado");
+                    isFirebaseEnabled = true;
+                    updateSyncStatus('online');
+                })
+                .catch((err) => {
+                    console.warn("⚠️ Persistencia no disponible:", err);
+                    isFirebaseEnabled = true;
+                    updateSyncStatus('online');
+                });
+        } catch (error) {
+            console.warn("⚠️ Firebase no configurado. Usando solo modo local.");
+            updateSyncStatus('offline');
+        }
+
+        let html5QrCode = null;
+        let html5QrCodeList = null;
+        let html5QrCodeSearch = null;
+        let savedLists = {};
+        let currentList = '';
+        let currentListStudents = [];
+        let attendanceRecords = [];
+
+        function updateSyncStatus(status) {
+            const statusDiv = document.getElementById('syncStatus');
+            const icon = document.getElementById('syncIcon');
+            const text = document.getElementById('syncText');
+            
+            statusDiv.className = 'sync-status';
+            
+            if (status === 'online') {
+                statusDiv.classList.add('sync-online');
+                icon.textContent = '🟢';
+                text.textContent = 'Online - Sincronizado';
+            } else if (status === 'offline') {
+                statusDiv.classList.add('sync-offline');
+                icon.textContent = '🔴';
+                text.textContent = 'Offline - Sin conexión';
+            } else if (status === 'syncing') {
+                statusDiv.classList.add('sync-syncing');
+                icon.textContent = '🟡';
+                text.textContent = 'Sincronizando...';
+            }
+        }
+
+        if (isFirebaseEnabled) {
+            window.addEventListener('online', () => {
+                updateSyncStatus('syncing');
+                setTimeout(() => updateSyncStatus('online'), 2000);
+            });
+            
+            window.addEventListener('offline', () => {
+                updateSyncStatus('offline');
+            });
+        }
+
+        function syncListsToFirebase() {
+            if (!isFirebaseEnabled) return;
+            
+            updateSyncStatus('syncing');
+            
+            Object.keys(savedLists).forEach(listName => {
+                db.collection('listas').doc(listName).set({
+                    nombre: listName,
+                    alumnos: savedLists[listName],
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(err => console.error("Error sync:", err));
+            });
+            
+            setTimeout(() => updateSyncStatus('online'), 1000);
+        }
+
+        function syncAttendanceToFirebase() {
+            if (!isFirebaseEnabled) return;
+            
+            updateSyncStatus('syncing');
+            
+            attendanceRecords.forEach((record) => {
+                const id = `${record.nombre}_${record.apellidoPaterno}_${record.fecha}_${record.hora}`.replace(/[^a-zA-Z0-9]/g, '_');
+                db.collection('asistencias').doc(id).set({
+                    ...record,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(err => console.error("Error sync:", err));
+            });
+            
+            setTimeout(() => updateSyncStatus('online'), 1000);
+        }
+
+        function loadFromFirebase() {
+            if (!isFirebaseEnabled) return;
+            
+            db.collection('listas').onSnapshot((snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added" || change.type === "modified") {
+                        const data = change.doc.data();
+                        savedLists[data.nombre] = data.alumnos;
+                    }
+                    if (change.type === "removed") {
+                        delete savedLists[change.doc.id];
+                    }
+                });
+                localStorage.setItem('savedLists', JSON.stringify(savedLists));
+                loadListOptions();
+            });
+            
+            db.collection('asistencias').onSnapshot((snapshot) => {
+                const newRecords = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.timestamp) {
+                        newRecords.push(data);
+                    }
+                });
+                
+                const localRecords = attendanceRecords.filter(r => !r.timestamp);
+                attendanceRecords = [...localRecords, ...newRecords];
+                
+                localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+                displayRecords();
+                updateGroupFilter();
+            });
+        }
+
+        window.addEventListener('load', () => {
+            const savedListsData = localStorage.getItem('savedLists');
+            const attendanceData = localStorage.getItem('attendanceRecords');
+            
+            if (savedListsData) savedLists = JSON.parse(savedListsData);
+            if (attendanceData) attendanceRecords = JSON.parse(attendanceData);
+            
+            loadListOptions();
+            displayRecords();
+            updateGroupFilter();
+            
+            if (isFirebaseEnabled) {
+                loadFromFirebase();
+            }
+            
+            document.getElementById('listGrade').addEventListener('input', updateListNamePreview);
+            document.getElementById('listGroup').addEventListener('input', updateListNamePreview);
+            document.getElementById('listSubject').addEventListener('input', updateListNamePreview);
+            document.getElementById('listSchool').addEventListener('input', updateListNamePreview);
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            if (html5QrCode) html5QrCode.stop().catch(() => {});
+            if (html5QrCodeList) html5QrCodeList.stop().catch(() => {});
+            if (html5QrCodeSearch) html5QrCodeSearch.stop().catch(() => {});
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
