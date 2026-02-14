@@ -512,15 +512,23 @@
             if (!isFirebaseEnabled) return;
             
             // Cargar listas desde Firebase
-            db.collection('listas').onSnapshot((snapshot) => {
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    listas[data.nombre] = data.alumnos;
-                });
-                localStorage.setItem('listas', JSON.stringify(listas));
-                displayListas();
-                loadListaSelects();
-            });
+db.collection('listas').onSnapshot((snapshot) => {
+    console.log("📥 Recibiendo listas desde Firebase. Total docs:", snapshot.size);
+    
+    snapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log("📋 Lista encontrada:", data.nombre, "con", data.alumnos ? data.alumnos.length : 0, "alumnos");
+        listas[data.nombre] = data.alumnos;
+    });
+    
+    console.log("✅ Total listas en memoria:", Object.keys(listas).length);
+    console.log("📊 Nombres de listas:", Object.keys(listas));
+    
+    localStorage.setItem('listas', JSON.stringify(listas));
+    displayListas();
+    loadListaSelects();
+});
+
             
             // Cargar actividades
             db.collection('actividades').onSnapshot((snapshot) => {
