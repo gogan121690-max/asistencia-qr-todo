@@ -419,19 +419,12 @@
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             
-            db.enablePersistence()
-                .then(() => {
-                    console.log("✅ Modo offline activado");
-                    isFirebaseEnabled = true;
-                    updateSyncStatus('online');
-                })
-                .catch((err) => {
-                    console.warn("⚠️ Persistencia no disponible:", err);
-                    isFirebaseEnabled = true;
-                    updateSyncStatus('online');
-                });
+            // Persistencia desactivada para evitar conflictos
+            isFirebaseEnabled = true;
+            updateSyncStatus('online');
+            console.log("✅ Firebase conectado");
         } catch (error) {
-            console.warn("⚠️ Firebase no configurado. Usando solo modo local.");
+            console.warn("⚠️ Firebase no configurado:", error);
             updateSyncStatus('offline');
         }
 
