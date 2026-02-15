@@ -333,16 +333,15 @@
 
     <script src="./asistencia-functions.js"></script>
     <script>
-
-	// Your web app's Firebase configuration
-	const firebaseConfig = {
-  	    apiKey: "AIzaSyDSKcyeDVOZRw2CkMrGapYymdguYllJta4",
-  	    authDomain: "asistencia-qr-38271.firebaseapp.com",
-  	    projectId: "asistencia-qr-38271",
-  	    storageBucket: "asistencia-qr-38271.firebasestorage.app",
- 	    messagingSenderId: "749102163562",
- 	    appId: "1:749102163562:web:101593e4fcb6cccbafcc13"
-	};
+        // CONFIGURACIÓN FIREBASE - REEMPLAZA CON TUS DATOS
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY_AQUI",
+            authDomain: "TU_PROJECT_ID.firebaseapp.com",
+            projectId: "TU_PROJECT_ID",
+            storageBucket: "TU_PROJECT_ID.appspot.com",
+            messagingSenderId: "TU_SENDER_ID",
+            appId: "TU_APP_ID"
+        };
 
         let db;
         let isFirebaseEnabled = false;
@@ -351,9 +350,12 @@
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             
-           // SIN persistencia para evitar conflictos
-isFirebaseEnabled = true;
-updateSyncStatus('online');
+            db.enablePersistence()
+                .then(() => {
+                    console.log("✅ Modo offline activado");
+                    isFirebaseEnabled = true;
+                    updateSyncStatus('online');
+                })
                 .catch((err) => {
                     console.warn("⚠️ Persistencia no disponible:", err);
                     isFirebaseEnabled = true;
