@@ -402,15 +402,15 @@
 
     <script src="./calificaciones-functions.js"></script>
     <script>
-    // Your web app's Firebase configuration
-	const firebaseConfig = {
-  	    apiKey: "AIzaSyDSKcyeDVOZRw2CkMrGapYymdguYllJta4",
-  	    authDomain: "asistencia-qr-38271.firebaseapp.com",
-  	    projectId: "asistencia-qr-38271",
-  	    storageBucket: "asistencia-qr-38271.firebasestorage.app",
- 	    messagingSenderId: "749102163562",
- 	    appId: "1:749102163562:web:101593e4fcb6cccbafcc13"
-	};
+        // CONFIGURACIÓN FIREBASE - USA LA MISMA QUE EN ASISTENCIA
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY_AQUI",
+            authDomain: "TU_PROJECT_ID.firebaseapp.com",
+            projectId: "TU_PROJECT_ID",
+            storageBucket: "TU_PROJECT_ID.appspot.com",
+            messagingSenderId: "TU_SENDER_ID",
+            appId: "TU_APP_ID"
+        };
 
         let db;
         let isFirebaseEnabled = false;
@@ -419,9 +419,12 @@
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             
-            // SIN persistencia para evitar conflictos
-isFirebaseEnabled = true;
-updateSyncStatus('online');
+            db.enablePersistence()
+                .then(() => {
+                    console.log("✅ Modo offline activado");
+                    isFirebaseEnabled = true;
+                    updateSyncStatus('online');
+                })
                 .catch((err) => {
                     console.warn("⚠️ Persistencia no disponible:", err);
                     isFirebaseEnabled = true;
@@ -509,21 +512,15 @@ updateSyncStatus('online');
             if (!isFirebaseEnabled) return;
             
             // Cargar listas desde Firebase
-			db.collection('listas').onSnapshot((snapshot) => {
-   		 console.log("📥 Recibiendo listas desde Firebase. Total docs:", snapshot.size);
-    	snapshot.forEach((doc) => {
-        const data = doc.data();
-        console.log("📋 Lista encontrada:", data.nombre, "con", data.alumnos ? data.alumnos.length : 0, "alumnos");
-        listas[data.nombre] = data.alumnos;
-    });
-    
-    console.log("✅ Total listas en memoria:", Object.keys(listas).length);
-    console.log("📊 Nombres de listas:", Object.keys(listas));
-    
-    localStorage.setItem('listas', JSON.stringify(listas));
-    displayListas();
-    loadListaSelects();
-});
+            db.collection('listas').onSnapshot((snapshot) => {
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    listas[data.nombre] = data.alumnos;
+                });
+                localStorage.setItem('listas', JSON.stringify(listas));
+                displayListas();
+                loadListaSelects();
+            });
             
             // Cargar actividades
             db.collection('actividades').onSnapshot((snapshot) => {
