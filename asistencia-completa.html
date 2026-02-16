@@ -309,6 +309,14 @@
         <!-- TAB: REGISTROS -->
         <div id="tab-records" class="tab-content">
             <h2>📊 Registros de Asistencia</h2>
+            
+            <div class="form-group">
+                <label>Filtrar por Lista:</label>
+                <select id="recordsListFilter" onchange="displayRecordsByList()">
+                    <option value="">-- Selecciona una lista --</option>
+                </select>
+            </div>
+            
             <div class="scanner-controls">
                 <button class="btn btn-success" onclick="exportToExcel()">📥 Exportar</button>
                 <button class="btn btn-warning" onclick="removeDuplicates()">🔄 Eliminar Duplicados</button>
