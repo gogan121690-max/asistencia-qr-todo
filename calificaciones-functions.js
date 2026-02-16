@@ -32,6 +32,11 @@ function displayListas() {
 function verDetallesLista(listaName) {
     const alumnos = listas[listaName];
     
+    if (!alumnos || alumnos.length === 0) {
+        alert('Esta lista no tiene alumnos');
+        return;
+    }
+    
     let html = `<h3>${listaName}</h3>`;
     html += '<div class="table-wrapper"><table><thead><tr>';
     html += '<th>No.</th><th>Nombre Completo</th><th>Grado</th><th>Grupo</th>';
@@ -48,7 +53,8 @@ function verDetallesLista(listaName) {
     
     html += '</tbody></table></div>';
     
-    showAlert(html, 'success');
+    const container = document.getElementById('listasContainer');
+    container.innerHTML = html;
 }
 
 function loadListaSelects() {
@@ -430,4 +436,37 @@ function exportPromediosToExcel() {
     XLSX.writeFile(wb, `Promedios_${currentLista}_${fecha}.xlsx`);
     
     showAlert('✅ Promedios exportados a Excel', 'success');
+}
+
+// ========== FUNCIONES PARA CALIFICAR ==========
+
+function loadActividadesParaCalificar() {
+    const listaName = document.getElementById('calificarListaSelect').value;
+    
+    if (!listaName) {
+        document.getElementById('calificarSection').style.display = 'none';
+        return;
+    }
+    
+    currentCalificarLista = listaName;
+    
+    const actividadesLista = actividades[listaName] || [];
+    const select = document.getElementById('actividadSelect');
+    
+    select.innerHTML = '<option value="">-- Selecciona una actividad --</option>';
+    
+    if (actividadesLista.length === 0) {
+        select.innerHTML = '<option value="">No hay actividades creadas</option>';
+        document.getElementById('calificarSection').style.display = 'block';
+        return;
+    }
+    
+    actividadesLista.forEach(actividad => {
+        const option = document.createElement('option');
+        option.value = actividad.id;
+        option.textContent = `${actividad.titulo} - ${actividad.fecha}`;
+        select.appendChild(option);
+    });
+    
+    document.getElementById('calificarSection').style.display = 'block';
 }
