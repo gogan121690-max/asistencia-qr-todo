@@ -290,17 +290,17 @@ function stopListScanner() {
 
 function updateGroupFilter() {
     const select = document.getElementById('scannerGroupFilter');
-    const groups = new Set();
     
-    attendanceRecords.forEach(record => {
-        groups.add(`${record.grado}°${record.grupo}`);
-    });
+    select.innerHTML = '<option value="">Todas las listas</option>';
     
-    select.innerHTML = '<option value="">Todos los grupos</option>';
-    Array.from(groups).sort().forEach(group => {
+    if (Object.keys(savedLists).length === 0) {
+        return;
+    }
+    
+    Object.keys(savedLists).sort().forEach(listName => {
         const option = document.createElement('option');
-        option.value = group;
-        option.textContent = group;
+        option.value = listName;
+        option.textContent = listName;
         select.appendChild(option);
     });
 }
