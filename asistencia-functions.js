@@ -326,7 +326,22 @@ function startScanner() {
                     return;
                 }
                 
+                // Verificar si ya tomó asistencia hoy
                 const now = new Date();
+                const today = now.toLocaleDateString('es-MX');
+                
+                const yaRegistrado = attendanceRecords.find(r => 
+                    r.nombre === nombre &&
+                    r.apellidoPaterno === apellidoPaterno &&
+                    r.apellidoMaterno === apellidoMaterno &&
+                    r.fecha === today
+                );
+                
+                if (yaRegistrado) {
+                    showAlert(`⚠️ ${apellidoPaterno} ${apellidoMaterno} ${nombre} ya tomó asistencia hoy a las ${yaRegistrado.hora}`, 'error');
+                    return;
+                }
+                
                 const record = {
                     nombre,
                     apellidoPaterno,
@@ -334,7 +349,7 @@ function startScanner() {
                     grado,
                     grupo,
                     escuela,
-                    fecha: now.toLocaleDateString('es-MX'),
+                    fecha: today,
                     hora: now.toLocaleTimeString('es-MX')
                 };
                 
@@ -465,11 +480,23 @@ function displayRecordsByList() {
             const asistio = asistenciasPorAlumnoYFecha[alumnoKey]?.[fecha];
             
             if (asistio) {
-                html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistencia('${alumno.apellidoPaterno}', '${alumno.apellidoMaterno}', '${alumno.nombre}', '${fecha}', false)">
+                html += `<td style="text-align: center; cursor: pointer;" 
+                    data-ap="${alumno.apellidoPaterno}" 
+                    data-am="${alumno.apellidoMaterno}" 
+                    data-nombre="${alumno.nombre}" 
+                    data-fecha="${fecha}" 
+                    data-accion="quitar"
+                    onclick="handleToggleAsistenciaRegistros(this)">
                     <span style="color: #28a745; font-size: 1.5em;">✅</span>
                 </td>`;
             } else {
-                html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistencia('${alumno.apellidoPaterno}', '${alumno.apellidoMaterno}', '${alumno.nombre}', '${fecha}', true)">
+                html += `<td style="text-align: center; cursor: pointer;" 
+                    data-ap="${alumno.apellidoPaterno}" 
+                    data-am="${alumno.apellidoMaterno}" 
+                    data-nombre="${alumno.nombre}" 
+                    data-fecha="${fecha}" 
+                    data-accion="agregar"
+                    onclick="handleToggleAsistenciaRegistros(this)">
                     <span style="color: #dc3545; font-size: 1.5em;">❌</span>
                 </td>`;
                 totalFaltas++;
@@ -786,12 +813,30 @@ function displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre,
         const asistio = asistencias[fecha];
         
         if (asistio) {
-            html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistenciaSearch('${apellidoPaterno}', '${apellidoMaterno}', '${nombre}', '${fecha}', '${grado}', '${grupo}', '${escuela}', false)">
+            html += `<td style="text-align: center; cursor: pointer;" 
+                data-ap="${apellidoPaterno}" 
+                data-am="${apellidoMaterno}" 
+                data-nombre="${nombre}" 
+                data-fecha="${fecha}" 
+                data-grado="${grado}" 
+                data-grupo="${grupo}" 
+                data-escuela="${escuela}" 
+                data-accion="quitar"
+                onclick="handleToggleAsistencia(this)">
                 <span style="color: #28a745; font-size: 1.5em;">✅</span>
             </td>`;
             totalAsistencias++;
         } else {
-            html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistenciaSearch('${apellidoPaterno}', '${apellidoMaterno}', '${nombre}', '${fecha}', '${grado}', '${grupo}', '${escuela}', true)">
+            html += `<td style="text-align: center; cursor: pointer;" 
+                data-ap="${apellidoPaterno}" 
+                data-am="${apellidoMaterno}" 
+                data-nombre="${nombre}" 
+                data-fecha="${fecha}" 
+                data-grado="${grado}" 
+                data-grupo="${grupo}" 
+                data-escuela="${escuela}" 
+                data-accion="agregar"
+                onclick="handleToggleAsistencia(this)">
                 <span style="color: #dc3545; font-size: 1.5em;">❌</span>
             </td>`;
             totalFaltas++;
@@ -805,4 +850,31 @@ function displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre,
     html += '<p style="margin-top: 15px; color: #666; font-size: 0.9em; text-align: center;">💡 Click en ✅ o ❌ para cambiar</p>';
     
     results.innerHTML = html;
+}
+
+function handleToggleAsistencia(element) {
+    const apellidoPaterno = element.getAttribute('data-ap');
+    const apellidoMaterno = element.getAttribute('data-am');
+    const nombre = element.getAttribute('data-nombre');
+    const fecha = element.getAttribute('data-fecha');
+    const grado = element.getAttribute('data-grado');
+    const grupo = element.getAttribute('data-grupo');
+    const escuela = element.getAttribute('data-escuela');
+    const accion = element.getAttribute('data-accion');
+    
+    const marcarAsistencia = accion === 'agregar';
+    
+    toggleAsistenciaSearch(apellidoPaterno, apellidoMaterno, nombre, fecha, grado, grupo, escuela, marcarAsistencia);
+}
+
+function handleToggleAsistenciaRegistros(element) {
+    const apellidoPaterno = element.getAttribute('data-ap');
+    const apellidoMaterno = element.getAttribute('data-am');
+    const nombre = element.getAttribute('data-nombre');
+    const fecha = element.getAttribute('data-fecha');
+    const accion = element.getAttribute('data-accion');
+    
+    const marcarAsistencia = accion === 'agregar';
+    
+    toggleAsistencia(apellidoPaterno, apellidoMaterno, nombre, fecha, marcarAsistencia);
 }
