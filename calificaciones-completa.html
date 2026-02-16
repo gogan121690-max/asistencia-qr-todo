@@ -15,6 +15,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
+    <!-- QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
     <!-- Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
@@ -343,12 +346,37 @@
             <div id="calificarSection" style="display:none;">
                 <div class="form-group">
                     <label>Seleccionar Actividad:</label>
-                    <select id="actividadSelect" onchange="loadCalificacionesTable()">
+                    <select id="actividadSelect" onchange="showQRScannerForGrading()">
                         <option value="">-- Selecciona una actividad --</option>
                     </select>
                 </div>
 
-                <div id="calificacionesTable"></div>
+                <div id="qrScannerSection" style="display:none; margin: 30px 0;">
+                    <h3 style="text-align:center; color:#28a745;">📷 Escanea QR del Alumno</h3>
+                    <div id="readerCalificar" style="width: 100%; max-width: 500px; margin: 20px auto;"></div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0; flex-wrap: wrap;">
+                        <button class="btn" id="startCalificarBtn" onclick="startCalificarScanner()">▶️ Iniciar Escáner</button>
+                        <button class="btn btn-secondary" id="stopCalificarBtn" onclick="stopCalificarScanner()" disabled>⏹️ Detener</button>
+                    </div>
+
+                    <div id="currentStudentInfo" style="display:none; background:#e7f3ff; padding:25px; border-radius:15px; margin:20px 0; border: 3px solid #28a745;">
+                        <h3 style="color:#28a745; margin-bottom:15px;">👤 Alumno Escaneado:</h3>
+                        <p id="studentName" style="font-size:1.3em; font-weight:bold; color:#333; margin-bottom:10px;"></p>
+                        <p id="studentInfo" style="color:#666; font-size:1.1em; margin-bottom:5px;"></p>
+                        <p id="currentGrade" style="color:#28a745; font-weight:bold; font-size:1.1em;"></p>
+                        
+                        <h4 style="margin-top:25px; margin-bottom:15px; color:#333;">✏️ Selecciona Calificación:</h4>
+                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
+                            <button class="btn btn-warning" onclick="asignarCalificacion(0)" style="font-size:1.3em; padding:20px 35px; min-width:120px;">N/P<br><small>(0)</small></button>
+                            <button class="btn" onclick="asignarCalificacion(8)" style="font-size:1.3em; padding:20px 35px; min-width:120px; background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);">8</button>
+                            <button class="btn btn-success" onclick="asignarCalificacion(9)" style="font-size:1.3em; padding:20px 35px; min-width:120px;">9</button>
+                            <button class="btn btn-success" onclick="asignarCalificacion(10)" style="font-size:1.3em; padding:20px 35px; min-width:120px; background: linear-gradient(135deg, #66bb6a 0%, #43a047 100%);">10</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="calificacionesTable" style="margin-top:30px;"></div>
             </div>
         </div>
 
@@ -563,6 +591,11 @@
             
             event.target.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // Detener escáner si está activo
+            if (window.html5QrcodeCalificar) {
+                window.html5QrcodeCalificar.stop().catch(() => {});
+            }
         }
 
         function showAlert(message, type) {
@@ -570,6 +603,205 @@
             alert.textContent = message;
             alert.className = `alert alert-${type} show`;
             setTimeout(() => alert.classList.remove('show'), 3000);
+        }
+
+        // Variables para calificación
+        let html5QrcodeCalificar = null;
+        let currentScannedStudent = null;
+        let currentCalificarLista = '';
+        let currentCalificarActividad = '';
+
+        function showQRScannerForGrading() {
+            const actividadId = document.getElementById('actividadSelect').value;
+            if (!actividadId) return;
+            
+            currentCalificarActividad = actividadId;
+            document.getElementById('qrScannerSection').style.display = 'block';
+            displayCalificacionesTable();
+        }
+
+        function startCalificarScanner() {
+            if (!html5QrcodeCalificar) {
+                html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
+            }
+
+            html5QrcodeCalificar.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    const data = decodedText.split(',');
+                    if (data.length >= 6) {
+                        handleScannedStudent(data);
+                    }
+                }
+            ).then(() => {
+                document.getElementById('startCalificarBtn').disabled = true;
+                document.getElementById('stopCalificarBtn').disabled = false;
+            }).catch(err => {
+                console.error("Error al iniciar escáner:", err);
+                showAlert('Error al iniciar escáner', 'error');
+            });
+        }
+
+        function stopCalificarScanner() {
+            if (html5QrcodeCalificar) {
+                html5QrcodeCalificar.stop().then(() => {
+                    document.getElementById('startCalificarBtn').disabled = false;
+                    document.getElementById('stopCalificarBtn').disabled = true;
+                }).catch(() => {});
+            }
+        }
+
+        function handleScannedStudent(data) {
+            const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
+            
+            currentScannedStudent = {
+                apellidoPaterno,
+                apellidoMaterno,
+                nombre,
+                grado,
+                grupo,
+                escuela
+            };
+
+            const fullName = `${apellidoPaterno} ${apellidoMaterno} ${nombre}`;
+            document.getElementById('studentName').textContent = fullName;
+            document.getElementById('studentInfo').textContent = `Grado: ${grado}° | Grupo: ${grupo} | Escuela: ${escuela}`;
+            
+            // Verificar si ya tiene calificación
+            const key = `${currentCalificarLista}_${currentCalificarActividad}_${fullName}`;
+            const existingGrade = calificaciones[key];
+            
+            if (existingGrade) {
+                document.getElementById('currentGrade').textContent = `⚠️ Calificación actual: ${existingGrade.calificacion}`;
+                document.getElementById('currentGrade').style.display = 'block';
+            } else {
+                document.getElementById('currentGrade').textContent = '';
+                document.getElementById('currentGrade').style.display = 'none';
+            }
+            
+            document.getElementById('currentStudentInfo').style.display = 'block';
+            
+            // Detener escáner temporalmente
+            stopCalificarScanner();
+        }
+
+        function asignarCalificacion(calificacion) {
+            if (!currentScannedStudent) {
+                showAlert('Error: No hay alumno escaneado', 'error');
+                return;
+            }
+
+            const fullName = `${currentScannedStudent.apellidoPaterno} ${currentScannedStudent.apellidoMaterno} ${currentScannedStudent.nombre}`;
+            const key = `${currentCalificarLista}_${currentCalificarActividad}_${fullName}`;
+            
+            const calificacionData = {
+                lista: currentCalificarLista,
+                actividad: currentCalificarActividad,
+                alumno: fullName,
+                apellidoPaterno: currentScannedStudent.apellidoPaterno,
+                apellidoMaterno: currentScannedStudent.apellidoMaterno,
+                nombre: currentScannedStudent.nombre,
+                grado: currentScannedStudent.grado,
+                grupo: currentScannedStudent.grupo,
+                escuela: currentScannedStudent.escuela,
+                calificacion: calificacion,
+                fecha: new Date().toLocaleDateString('es-MX'),
+                hora: new Date().toLocaleTimeString('es-MX')
+            };
+
+            calificaciones[key] = calificacionData;
+            localStorage.setItem('calificaciones', JSON.stringify(calificaciones));
+
+            // Guardar en Firebase
+            if (isFirebaseEnabled) {
+                db.collection('calificaciones').doc(key).set({
+                    ...calificacionData,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    showAlert(`✅ Calificación ${calificacion} asignada a ${fullName}`, 'success');
+                }).catch(err => {
+                    console.error("Error al guardar:", err);
+                    showAlert('⚠️ Guardado localmente, sincronizará después', 'success');
+                });
+            } else {
+                showAlert(`✅ Calificación ${calificacion} asignada a ${fullName}`, 'success');
+            }
+
+            // Limpiar y mostrar tabla actualizada
+            document.getElementById('currentStudentInfo').style.display = 'none';
+            currentScannedStudent = null;
+            displayCalificacionesTable();
+            
+            // Reiniciar escáner
+            setTimeout(() => {
+                startCalificarScanner();
+            }, 1000);
+        }
+
+        function displayCalificacionesTable() {
+            const container = document.getElementById('calificacionesTable');
+            
+            // Filtrar calificaciones de esta lista y actividad
+            const filteredCalificaciones = Object.values(calificaciones).filter(c => 
+                c.lista === currentCalificarLista && c.actividad === currentCalificarActividad
+            );
+
+            if (filteredCalificaciones.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No hay calificaciones asignadas aún</p>';
+                return;
+            }
+
+            let html = '<h3>📋 Calificaciones Asignadas</h3>';
+            html += '<div class="table-wrapper"><table><thead><tr>';
+            html += '<th>No.</th><th>Nombre Completo</th><th>Calificación</th><th>Fecha</th><th>Acciones</th>';
+            html += '</tr></thead><tbody>';
+
+            filteredCalificaciones.forEach((cal, idx) => {
+                const gradeColor = cal.calificacion === 0 ? '#dc3545' : cal.calificacion === 10 ? '#28a745' : '#ffc107';
+                const gradeBg = cal.calificacion === 0 ? '#f8d7da' : cal.calificacion === 10 ? '#d4edda' : '#fff3cd';
+                
+                html += `<tr>
+                    <td>${idx + 1}</td>
+                    <td>${cal.alumno}</td>
+                    <td style="background:${gradeBg}; color:${gradeColor}; font-weight:bold; font-size:1.2em; text-align:center;">
+                        ${cal.calificacion === 0 ? 'N/P' : cal.calificacion}
+                    </td>
+                    <td>${cal.fecha}</td>
+                    <td>
+                        <button class="btn btn-small btn-warning" onclick="modificarCalificacion('${cal.alumno}')">✏️ Modificar</button>
+                    </td>
+                </tr>`;
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        function modificarCalificacion(alumnoNombre) {
+            const key = `${currentCalificarLista}_${currentCalificarActividad}_${alumnoNombre}`;
+            const cal = calificaciones[key];
+            
+            if (!cal) return;
+
+            // Crear alumno temporal para modificar
+            currentScannedStudent = {
+                apellidoPaterno: cal.apellidoPaterno,
+                apellidoMaterno: cal.apellidoMaterno,
+                nombre: cal.nombre,
+                grado: cal.grado,
+                grupo: cal.grupo,
+                escuela: cal.escuela
+            };
+
+            document.getElementById('studentName').textContent = alumnoNombre;
+            document.getElementById('studentInfo').textContent = `Grado: ${cal.grado}° | Grupo: ${cal.grupo} | Escuela: ${cal.escuela}`;
+            document.getElementById('currentGrade').textContent = `Calificación actual: ${cal.calificacion === 0 ? 'N/P' : cal.calificacion}`;
+            document.getElementById('currentGrade').style.display = 'block';
+            document.getElementById('currentStudentInfo').style.display = 'block';
+
+            // Scroll hacia el escáner
+            document.getElementById('currentStudentInfo').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     </script>
 </body>
