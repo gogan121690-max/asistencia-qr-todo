@@ -365,6 +365,122 @@ function stopScanner() {
 // ========== REGISTROS ==========
 
 function displayRecords() {
+    // Actualizar selector de listas
+    const select = document.getElementById('recordsListFilter');
+    if (select) {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Todos los registros</option>';
+        
+        Object.keys(savedLists).sort().forEach(listName => {
+            const option = document.createElement('option');
+            option.value = listName;
+            option.textContent = listName;
+            if (listName === currentValue) option.selected = true;
+            select.appendChild(option);
+        });
+    }
+    
+    displayRecordsByList();
+}
+
+function displayRecordsByList() {
+    const container = document.getElementById('recordsTable');
+    const selectedList = document.getElementById('recordsListFilter')?.value;
+    
+    if (!selectedList) {
+        // Mostrar todos los registros (tabla simple)
+        displayAllRecords();
+        return;
+    }
+    
+    // Obtener alumnos de la lista
+    const alumnos = savedLists[selectedList] || [];
+    
+    if (alumnos.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>📭 Esta lista no tiene alumnos</p></div>';
+        return;
+    }
+    
+    // Obtener todas las fechas únicas de asistencia para esta lista
+    const fechas = new Set();
+    const asistenciasPorAlumnoYFecha = {};
+    
+    attendanceRecords.forEach(record => {
+        // Verificar si el alumno pertenece a esta lista
+        const alumnoEnLista = alumnos.find(a => 
+            a.nombre === record.nombre &&
+            a.apellidoPaterno === record.apellidoPaterno &&
+            a.apellidoMaterno === record.apellidoMaterno
+        );
+        
+        if (alumnoEnLista) {
+            fechas.add(record.fecha);
+            const alumnoKey = `${record.apellidoPaterno}_${record.apellidoMaterno}_${record.nombre}`;
+            if (!asistenciasPorAlumnoYFecha[alumnoKey]) {
+                asistenciasPorAlumnoYFecha[alumnoKey] = {};
+            }
+            asistenciasPorAlumnoYFecha[alumnoKey][record.fecha] = true;
+        }
+    });
+    
+    const fechasOrdenadas = Array.from(fechas).sort((a, b) => {
+        const [dA, mA, yA] = a.split('/');
+        const [dB, mB, yB] = b.split('/');
+        return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
+    });
+    
+    if (fechasOrdenadas.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>📭 No hay registros de asistencia para esta lista</p></div>';
+        return;
+    }
+    
+    // Crear tabla
+    let html = '<table><thead><tr>';
+    html += '<th>Nombre del alumno</th>';
+    
+    fechasOrdenadas.forEach(fecha => {
+        html += `<th style="text-align: center;">${fecha}</th>`;
+    });
+    
+    html += '<th style="text-align: center; background: #fff3cd;">Total de Faltas</th>';
+    html += '</tr></thead><tbody>';
+    
+    // Ordenar alumnos alfabéticamente
+    const alumnosOrdenados = [...alumnos].sort((a, b) => {
+        const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
+        const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
+        return nameA.localeCompare(nameB);
+    });
+    
+    alumnosOrdenados.forEach(alumno => {
+        const alumnoKey = `${alumno.apellidoPaterno}_${alumno.apellidoMaterno}_${alumno.nombre}`;
+        const nombreCompleto = `${alumno.apellidoPaterno} ${alumno.apellidoMaterno} ${alumno.nombre}`;
+        
+        html += '<tr>';
+        html += `<td><strong>${nombreCompleto}</strong></td>`;
+        
+        let totalFaltas = 0;
+        
+        fechasOrdenadas.forEach(fecha => {
+            const asistio = asistenciasPorAlumnoYFecha[alumnoKey]?.[fecha];
+            
+            if (asistio) {
+                html += '<td style="text-align: center; color: #28a745; font-size: 1.5em;">✅</td>';
+            } else {
+                html += '<td style="text-align: center; color: #dc3545; font-size: 1.5em;">❌</td>';
+                totalFaltas++;
+            }
+        });
+        
+        html += `<td style="text-align: center; font-weight: bold; font-size: 1.2em; background: #fff3cd;">${totalFaltas}</td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function displayAllRecords() {
     const container = document.getElementById('recordsTable');
     
     if (attendanceRecords.length === 0) {
@@ -372,92 +488,32 @@ function displayRecords() {
         return;
     }
     
-    // Agrupar por fecha
-    const byDate = {};
-    const allStudents = new Map();
+    // Tabla simple con todos los registros
+    let html = '<table><thead><tr>';
+    html += '<th>Fecha</th><th>Hora</th><th>Nombre</th><th>Grado</th><th>Grupo</th><th>Escuela</th>';
+    html += '</tr></thead><tbody>';
     
-    attendanceRecords.forEach(record => {
-        const key = `${record.apellidoPaterno}_${record.apellidoMaterno}_${record.nombre}`;
-        const groupKey = `${record.grado}°${record.grupo}`;
-        
-        if (!byDate[record.fecha]) {
-            byDate[record.fecha] = [];
-        }
-        byDate[record.fecha].push(record);
-        
-        if (!allStudents.has(key)) {
-            allStudents.set(key, {
-                ...record,
-                groupKey,
-                dates: new Set()
-            });
-        }
-        allStudents.get(key).dates.add(record.fecha);
+    const sortedRecords = [...attendanceRecords].sort((a, b) => {
+        const [dA, mA, yA] = a.fecha.split('/');
+        const [dB, mB, yB] = b.fecha.split('/');
+        const dateA = new Date(yA, mA - 1, dA);
+        const dateB = new Date(yB, mB - 1, dB);
+        return dateB - dateA;
     });
     
-    const allDates = Object.keys(byDate).sort((a, b) => {
-        const [dA, mA, yA] = a.split('/');
-        const [dB, mB, yB] = b.split('/');
-        return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
+    sortedRecords.forEach(record => {
+        const nombreCompleto = `${record.apellidoPaterno} ${record.apellidoMaterno} ${record.nombre}`;
+        html += `<tr>
+            <td>${record.fecha}</td>
+            <td>${record.hora}</td>
+            <td><strong>${nombreCompleto}</strong></td>
+            <td>${record.grado}°</td>
+            <td>${record.grupo}</td>
+            <td>${record.escuela}</td>
+        </tr>`;
     });
     
-    // Agrupar alumnos por grado y grupo
-    const byGroup = {};
-    allStudents.forEach((student, key) => {
-        const group = student.groupKey;
-        if (!byGroup[group]) {
-            byGroup[group] = [];
-        }
-        byGroup[group].push({ key, ...student });
-    });
-    
-    let html = '';
-    
-    Object.keys(byGroup).sort().forEach(group => {
-        const students = byGroup[group].sort((a, b) => {
-            const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`.toLowerCase();
-            const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`.toLowerCase();
-            return nameA.localeCompare(nameB, 'es');
-        });
-        
-        html += `<h3 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; margin-top: 20px; border-radius: 5px;">
-            ${group}
-        </h3>`;
-        
-        html += '<table><thead><tr>';
-        html += '<th style="min-width: 200px;">Alumno</th>';
-        allDates.forEach(date => {
-            html += `<th>${date}</th>`;
-        });
-        html += '<th>Total Asist.</th>';
-        html += '</tr></thead><tbody>';
-        
-        students.forEach((student, idx) => {
-            let totalAsistencias = 0;
-            html += '<tr>';
-            html += `<td style="font-weight: bold;">${idx + 1}. ${student.apellidoPaterno} ${student.apellidoMaterno} ${student.nombre}</td>`;
-            
-            allDates.forEach(date => {
-                if (student.dates.has(date)) {
-                    totalAsistencias++;
-                    const record = byDate[date].find(r => 
-                        r.nombre === student.nombre && 
-                        r.apellidoPaterno === student.apellidoPaterno && 
-                        r.apellidoMaterno === student.apellidoMaterno
-                    );
-                    html += `<td style="background: #d4edda; text-align: center;" title="Hora: ${record.hora}">✓</td>`;
-                } else {
-                    html += '<td style="background: #f8d7da; text-align: center;">✗</td>';
-                }
-            });
-            
-            html += `<td style="background: #e7f3ff; text-align: center; font-weight: bold;">${totalAsistencias}</td>`;
-            html += '</tr>';
-        });
-        
-        html += '</tbody></table>';
-    });
-    
+    html += '</tbody></table>';
     container.innerHTML = html;
 }
 
