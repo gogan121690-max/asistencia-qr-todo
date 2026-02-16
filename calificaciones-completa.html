@@ -692,8 +692,14 @@
                 return;
             }
 
+            // Obtener valor de la actividad
+            const actividadesLista = actividades[currentCalificarLista] || [];
+            const actividad = actividadesLista.find(a => a.id === currentCalificarActividad);
+            const maxValor = actividad ? actividad.valor : 10;
+
+            // Clave que coincide con loadPromedios
+            const key = `${currentCalificarLista}_${currentCalificarActividad}_${currentScannedStudent.nombre}_${currentScannedStudent.apellidoPaterno}_${currentScannedStudent.apellidoMaterno}`;
             const fullName = `${currentScannedStudent.apellidoPaterno} ${currentScannedStudent.apellidoMaterno} ${currentScannedStudent.nombre}`;
-            const key = `${currentCalificarLista}_${currentCalificarActividad}_${fullName}`;
             
             const calificacionData = {
                 lista: currentCalificarLista,
@@ -705,6 +711,8 @@
                 grado: currentScannedStudent.grado,
                 grupo: currentScannedStudent.grupo,
                 escuela: currentScannedStudent.escuela,
+                valor: calificacion,
+                maxValor: maxValor,
                 calificacion: calificacion,
                 fecha: new Date().toLocaleDateString('es-MX'),
                 hora: new Date().toLocaleTimeString('es-MX')
@@ -742,10 +750,16 @@
         function displayCalificacionesTable() {
             const container = document.getElementById('calificacionesTable');
             
-            // Filtrar calificaciones de esta lista y actividad
-            const filteredCalificaciones = Object.values(calificaciones).filter(c => 
-                c.lista === currentCalificarLista && c.actividad === currentCalificarActividad
-            );
+            // Filtrar calificaciones de esta lista y actividad usando las claves correctas
+            const filteredCalificaciones = [];
+            
+            const alumnos = listas[currentCalificarLista] || [];
+            alumnos.forEach(alumno => {
+                const key = `${currentCalificarLista}_${currentCalificarActividad}_${alumno.nombre}_${alumno.apellidoPaterno}_${alumno.apellidoMaterno}`;
+                if (calificaciones[key]) {
+                    filteredCalificaciones.push(calificaciones[key]);
+                }
+            });
 
             if (filteredCalificaciones.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No hay calificaciones asignadas aún</p>';
@@ -769,7 +783,7 @@
                     </td>
                     <td>${cal.fecha}</td>
                     <td>
-                        <button class="btn btn-small btn-warning" onclick="modificarCalificacion('${cal.alumno}')">✏️ Modificar</button>
+                        <button class="btn btn-small btn-warning" onclick="modificarCalificacion('${cal.nombre}', '${cal.apellidoPaterno}', '${cal.apellidoMaterno}')">✏️ Modificar</button>
                     </td>
                 </tr>`;
             });
@@ -778,22 +792,23 @@
             container.innerHTML = html;
         }
 
-        function modificarCalificacion(alumnoNombre) {
-            const key = `${currentCalificarLista}_${currentCalificarActividad}_${alumnoNombre}`;
+        function modificarCalificacion(nombre, apellidoPaterno, apellidoMaterno) {
+            const key = `${currentCalificarLista}_${currentCalificarActividad}_${nombre}_${apellidoPaterno}_${apellidoMaterno}`;
             const cal = calificaciones[key];
             
             if (!cal) return;
 
             // Crear alumno temporal para modificar
             currentScannedStudent = {
-                apellidoPaterno: cal.apellidoPaterno,
-                apellidoMaterno: cal.apellidoMaterno,
-                nombre: cal.nombre,
+                apellidoPaterno: apellidoPaterno,
+                apellidoMaterno: apellidoMaterno,
+                nombre: nombre,
                 grado: cal.grado,
                 grupo: cal.grupo,
                 escuela: cal.escuela
             };
 
+            const alumnoNombre = `${apellidoPaterno} ${apellidoMaterno} ${nombre}`;
             document.getElementById('studentName').textContent = alumnoNombre;
             document.getElementById('studentInfo').textContent = `Grado: ${cal.grado}° | Grupo: ${cal.grupo} | Escuela: ${cal.escuela}`;
             document.getElementById('currentGrade').textContent = `Calificación actual: ${cal.calificacion === 0 ? 'N/P' : cal.calificacion}`;
