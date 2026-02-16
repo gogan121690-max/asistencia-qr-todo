@@ -465,9 +465,13 @@ function displayRecordsByList() {
             const asistio = asistenciasPorAlumnoYFecha[alumnoKey]?.[fecha];
             
             if (asistio) {
-                html += '<td style="text-align: center; color: #28a745; font-size: 1.5em;">✅</td>';
+                html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistencia('${alumno.apellidoPaterno}', '${alumno.apellidoMaterno}', '${alumno.nombre}', '${fecha}', false)">
+                    <span style="color: #28a745; font-size: 1.5em;">✅</span>
+                </td>`;
             } else {
-                html += '<td style="text-align: center; color: #dc3545; font-size: 1.5em;">❌</td>';
+                html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistencia('${alumno.apellidoPaterno}', '${alumno.apellidoMaterno}', '${alumno.nombre}', '${fecha}', true)">
+                    <span style="color: #dc3545; font-size: 1.5em;">❌</span>
+                </td>`;
                 totalFaltas++;
             }
         });
@@ -477,6 +481,7 @@ function displayRecordsByList() {
     });
     
     html += '</tbody></table>';
+    html += '<p style="margin-top: 15px; color: #666; font-size: 0.9em;">💡 Click en ✅ o ❌ para cambiar asistencia/falta</p>';
     container.innerHTML = html;
 }
 
@@ -605,36 +610,8 @@ function startSearchScanner() {
         (text) => {
             const data = text.split(',');
             if (data.length === 6) {
-                const [apellidoPaterno, apellidoMaterno, nombre] = data;
-                
-                const records = attendanceRecords.filter(r =>
-                    r.nombre === nombre &&
-                    r.apellidoPaterno === apellidoPaterno &&
-                    r.apellidoMaterno === apellidoMaterno
-                );
-                
-                const results = document.getElementById('searchResults');
-                
-                if (records.length === 0) {
-                    results.innerHTML = `<div class="empty-state"><p>❌ Sin registros para ${apellidoPaterno} ${apellidoMaterno} ${nombre}</p></div>`;
-                } else {
-                    let html = `<h3 style="text-align:center; color:#667eea;">${apellidoPaterno} ${apellidoMaterno} ${nombre}</h3>`;
-                    html += `<p style="text-align:center; font-size:1.5em; color:#28a745;">Total: ${records.length} asistencias</p>`;
-                    html += '<div class="table-wrapper"><table><thead><tr><th>No.</th><th>Fecha</th><th>Hora</th><th>Grado</th><th>Grupo</th></tr></thead><tbody>';
-                    
-                    records.forEach((r, i) => {
-                        html += `<tr>
-                            <td>${i + 1}</td>
-                            <td>${r.fecha}</td>
-                            <td>${r.hora}</td>
-                            <td>${r.grado}°</td>
-                            <td>${r.grupo}</td>
-                        </tr>`;
-                    });
-                    
-                    html += '</tbody></table></div>';
-                    results.innerHTML = html;
-                }
+                const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
+                displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela);
             }
         }
     ).then(() => {
@@ -650,4 +627,182 @@ function stopSearchScanner() {
             document.getElementById('stopSearchBtn').disabled = true;
         });
     }
+}
+
+// ========== FUNCIONES PARA MODIFICAR ASISTENCIA ==========
+
+function toggleAsistencia(apellidoPaterno, apellidoMaterno, nombre, fecha, marcarAsistencia) {
+    if (marcarAsistencia) {
+        // Agregar asistencia
+        const today = new Date();
+        const newRecord = {
+            apellidoPaterno,
+            apellidoMaterno,
+            nombre,
+            fecha,
+            hora: today.toLocaleTimeString('es-MX'),
+            grado: '',
+            grupo: '',
+            escuela: '',
+            timestamp: today
+        };
+        
+        // Buscar datos del alumno en las listas
+        Object.values(savedLists).forEach(lista => {
+            const alumno = lista.find(a => 
+                a.apellidoPaterno === apellidoPaterno &&
+                a.apellidoMaterno === apellidoMaterno &&
+                a.nombre === nombre
+            );
+            if (alumno) {
+                newRecord.grado = alumno.grado;
+                newRecord.grupo = alumno.grupo;
+                newRecord.escuela = alumno.escuela;
+            }
+        });
+        
+        attendanceRecords.push(newRecord);
+        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        
+        syncAttendanceToFirebase();
+        showAlert(`✅ Asistencia agregada`, 'success');
+    } else {
+        // Quitar asistencia
+        const index = attendanceRecords.findIndex(r => 
+            r.apellidoPaterno === apellidoPaterno &&
+            r.apellidoMaterno === apellidoMaterno &&
+            r.nombre === nombre &&
+            r.fecha === fecha
+        );
+        
+        if (index > -1) {
+            attendanceRecords.splice(index, 1);
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+            
+            syncAttendanceToFirebase();
+            showAlert(`❌ Falta marcada`, 'success');
+        }
+    }
+    
+    // Actualizar tabla
+    displayRecordsByList();
+}
+
+function toggleAsistenciaSearch(apellidoPaterno, apellidoMaterno, nombre, fecha, grado, grupo, escuela, marcarAsistencia) {
+    if (marcarAsistencia) {
+        // Agregar asistencia
+        const today = new Date();
+        const newRecord = {
+            apellidoPaterno,
+            apellidoMaterno,
+            nombre,
+            grado,
+            grupo,
+            escuela,
+            fecha,
+            hora: today.toLocaleTimeString('es-MX'),
+            timestamp: today
+        };
+        
+        attendanceRecords.push(newRecord);
+        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        
+        syncAttendanceToFirebase();
+        showAlert(`✅ Asistencia agregada`, 'success');
+    } else {
+        // Quitar asistencia
+        const index = attendanceRecords.findIndex(r => 
+            r.apellidoPaterno === apellidoPaterno &&
+            r.apellidoMaterno === apellidoMaterno &&
+            r.nombre === nombre &&
+            r.fecha === fecha
+        );
+        
+        if (index > -1) {
+            attendanceRecords.splice(index, 1);
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+            
+            syncAttendanceToFirebase();
+            showAlert(`❌ Falta marcada`, 'success');
+        }
+    }
+    
+    // Actualizar tabla
+    displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela);
+}
+
+function displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela) {
+    const results = document.getElementById('searchResults');
+    
+    // Obtener todas las fechas únicas en el sistema
+    const todasLasFechas = new Set();
+    attendanceRecords.forEach(r => todasLasFechas.add(r.fecha));
+    
+    const fechasOrdenadas = Array.from(todasLasFechas).sort((a, b) => {
+        const [dA, mA, yA] = a.split('/');
+        const [dB, mB, yB] = b.split('/');
+        return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
+    });
+    
+    if (fechasOrdenadas.length === 0) {
+        results.innerHTML = `<div class="empty-state">
+            <p>❌ No hay fechas de asistencia registradas</p>
+            <p style="color:#999; font-size:0.9em;">${apellidoPaterno} ${apellidoMaterno} ${nombre}</p>
+        </div>`;
+        return;
+    }
+    
+    // Verificar en qué fechas asistió
+    const asistencias = {};
+    attendanceRecords.forEach(r => {
+        if (r.apellidoPaterno === apellidoPaterno && 
+            r.apellidoMaterno === apellidoMaterno && 
+            r.nombre === nombre) {
+            asistencias[r.fecha] = true;
+        }
+    });
+    
+    let html = `<h3 style="text-align:center; color:#667eea; margin-bottom: 20px;">
+        ${apellidoPaterno} ${apellidoMaterno} ${nombre}
+    </h3>`;
+    
+    let totalAsistencias = 0;
+    let totalFaltas = 0;
+    
+    html += '<div class="table-wrapper"><table>';
+    html += '<thead><tr><th>Nombre del alumno</th>';
+    
+    fechasOrdenadas.forEach(fecha => {
+        html += `<th style="text-align: center;">${fecha}</th>`;
+    });
+    
+    html += '<th style="text-align: center; background: #d4edda;">Asistencias</th>';
+    html += '<th style="text-align: center; background: #fff3cd;">Faltas</th>';
+    html += '</tr></thead><tbody><tr>';
+    
+    html += `<td><strong>${apellidoPaterno} ${apellidoMaterno} ${nombre}</strong></td>`;
+    
+    fechasOrdenadas.forEach(fecha => {
+        const asistio = asistencias[fecha];
+        
+        if (asistio) {
+            html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistenciaSearch('${apellidoPaterno}', '${apellidoMaterno}', '${nombre}', '${fecha}', '${grado}', '${grupo}', '${escuela}', false)">
+                <span style="color: #28a745; font-size: 1.5em;">✅</span>
+            </td>`;
+            totalAsistencias++;
+        } else {
+            html += `<td style="text-align: center; cursor: pointer;" onclick="toggleAsistenciaSearch('${apellidoPaterno}', '${apellidoMaterno}', '${nombre}', '${fecha}', '${grado}', '${grupo}', '${escuela}', true)">
+                <span style="color: #dc3545; font-size: 1.5em;">❌</span>
+            </td>`;
+            totalFaltas++;
+        }
+    });
+    
+    html += `<td style="text-align: center; font-weight: bold; font-size: 1.2em; background: #d4edda;">${totalAsistencias}</td>`;
+    html += `<td style="text-align: center; font-weight: bold; font-size: 1.2em; background: #fff3cd;">${totalFaltas}</td>`;
+    html += '</tr></tbody></table></div>';
+    
+    html += '<p style="margin-top: 15px; color: #666; font-size: 0.9em; text-align: center;">💡 Click en ✅ o ❌ para cambiar</p>';
+    
+    results.innerHTML = html;
 }
