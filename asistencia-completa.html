@@ -330,11 +330,44 @@
         <!-- TAB: BUSCAR -->
         <div id="tab-search" class="tab-content">
             <h2 style="text-align:center;">🔍 Buscar Alumno</h2>
+            
+            <!-- Búsqueda por texto -->
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                <h3 style="margin-bottom: 15px;">Buscar por Nombre</h3>
+                <div class="form-group">
+                    <label>Apellido Paterno:</label>
+                    <input type="text" id="searchApellidoP" placeholder="Ej: SANCHEZ">
+                </div>
+                <div class="form-group">
+                    <label>Apellido Materno:</label>
+                    <input type="text" id="searchApellidoM" placeholder="Ej: OSORIO">
+                </div>
+                <div class="form-group">
+                    <label>Nombre:</label>
+                    <input type="text" id="searchNombre" placeholder="Ej: EDUARDO">
+                </div>
+                <div style="text-align: center;">
+                    <button class="btn btn-success" onclick="searchByText()">🔍 Buscar</button>
+                    <button class="btn btn-secondary" onclick="clearSearchFields()">🔄 Limpiar</button>
+                </div>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9em; text-align: center;">
+                    💡 Puedes buscar solo con uno o más campos
+                </p>
+            </div>
+            
+            <!-- Separador -->
+            <div style="text-align: center; margin: 30px 0;">
+                <p style="color: #999; font-weight: bold;">───── O ─────</p>
+            </div>
+            
+            <!-- Búsqueda por QR -->
+            <h3 style="text-align:center; margin-bottom: 20px;">Escanear QR</h3>
             <div id="readerSearch"></div>
             <div class="scanner-controls">
                 <button class="btn" id="startSearchBtn" onclick="startSearchScanner()">▶️ Iniciar</button>
                 <button class="btn btn-secondary" id="stopSearchBtn" onclick="stopSearchScanner()" disabled>⏹️ Detener</button>
             </div>
+            
             <div id="searchResults"></div>
         </div>
     </div>
