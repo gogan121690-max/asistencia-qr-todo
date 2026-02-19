@@ -42,7 +42,14 @@ function verDetallesLista(listaName) {
     html += '<th>No.</th><th>Nombre Completo</th><th>Grado</th><th>Grupo</th>';
     html += '</tr></thead><tbody>';
     
-    alumnos.forEach((alumno, idx) => {
+    // Ordenar alfabéticamente
+    const alumnosOrdenados = [...alumnos].sort((a, b) => {
+        const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
+        const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
+        return nameA.localeCompare(nameB, 'es');
+    });
+    
+    alumnosOrdenados.forEach((alumno, idx) => {
         html += `<tr>
             <td>${idx + 1}</td>
             <td>${alumno.apellidoPaterno} ${alumno.apellidoMaterno} ${alumno.nombre}</td>
@@ -214,12 +221,19 @@ function loadCalificacionesTable() {
     const alumnos = listas[currentLista];
     const actividad = actividades[currentLista].find(a => a.id === actividadId);
     
+    // Ordenar alfabéticamente
+    const alumnosOrdenados = [...alumnos].sort((a, b) => {
+        const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
+        const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
+        return nameA.localeCompare(nameB, 'es');
+    });
+    
     let html = `<h3 style="margin: 20px 0;">${actividad.titulo}</h3>`;
     html += '<div class="table-wrapper"><table><thead><tr>';
     html += '<th>No.</th><th>Alumno</th><th>Calificación</th><th>Acciones</th>';
     html += '</tr></thead><tbody>';
     
-    alumnos.forEach((alumno, idx) => {
+    alumnosOrdenados.forEach((alumno, idx) => {
         const key = `${currentLista}_${actividadId}_${alumno.nombre}_${alumno.apellidoPaterno}_${alumno.apellidoMaterno}`;
         const calificacion = calificaciones[key] || { valor: '' };
         
@@ -351,7 +365,14 @@ function loadPromedios() {
     html += '<th class="average-cell">Promedio</th>';
     html += '</tr></thead><tbody>';
     
-    alumnos.forEach((alumno, idx) => {
+    // Ordenar alfabéticamente
+    const alumnosOrdenados = [...alumnos].sort((a, b) => {
+        const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
+        const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
+        return nameA.localeCompare(nameB, 'es');
+    });
+    
+    alumnosOrdenados.forEach((alumno, idx) => {
         html += '<tr>';
         html += `<td>${idx + 1}</td>`;
         html += `<td><strong>${alumno.apellidoPaterno} ${alumno.apellidoMaterno} ${alumno.nombre}</strong></td>`;
