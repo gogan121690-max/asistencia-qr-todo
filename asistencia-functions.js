@@ -878,3 +878,103 @@ function handleToggleAsistenciaRegistros(element) {
     
     toggleAsistencia(apellidoPaterno, apellidoMaterno, nombre, fecha, marcarAsistencia);
 }
+
+// ========== BÚSQUEDA POR TEXTO ==========
+
+function searchByText() {
+    const apellidoP = document.getElementById('searchApellidoP').value.trim().toUpperCase();
+    const apellidoM = document.getElementById('searchApellidoM').value.trim().toUpperCase();
+    const nombre = document.getElementById('searchNombre').value.trim().toUpperCase();
+    
+    if (!apellidoP && !apellidoM && !nombre) {
+        showAlert('❌ Ingresa al menos un campo para buscar', 'error');
+        return;
+    }
+    
+    // Buscar en todas las listas
+    let encontrados = [];
+    
+    Object.keys(savedLists).forEach(listaName => {
+        const alumnos = savedLists[listaName];
+        alumnos.forEach(alumno => {
+            let match = true;
+            
+            if (apellidoP && !alumno.apellidoPaterno.toUpperCase().includes(apellidoP)) {
+                match = false;
+            }
+            if (apellidoM && !alumno.apellidoMaterno.toUpperCase().includes(apellidoM)) {
+                match = false;
+            }
+            if (nombre && !alumno.nombre.toUpperCase().includes(nombre)) {
+                match = false;
+            }
+            
+            if (match) {
+                encontrados.push({
+                    ...alumno,
+                    lista: listaName
+                });
+            }
+        });
+    });
+    
+    if (encontrados.length === 0) {
+        document.getElementById('searchResults').innerHTML = 
+            '<div class="empty-state"><p>❌ No se encontraron alumnos</p></div>';
+        return;
+    }
+    
+    // Si solo hay 1 resultado, mostrar su tabla completa
+    if (encontrados.length === 1) {
+        const alumno = encontrados[0];
+        displayStudentAttendanceTable(
+            alumno.apellidoPaterno, 
+            alumno.apellidoMaterno, 
+            alumno.nombre, 
+            alumno.grado, 
+            alumno.grupo, 
+            alumno.escuela
+        );
+        return;
+    }
+    
+    // Si hay múltiples resultados, mostrar lista para seleccionar
+    let html = `<h3 style="text-align:center; color:#667eea; margin: 20px 0;">
+        📋 ${encontrados.length} alumno${encontrados.length > 1 ? 's' : ''} encontrado${encontrados.length > 1 ? 's' : ''}
+    </h3>`;
+    
+    html += '<div class="table-wrapper"><table><thead><tr>';
+    html += '<th>Nombre Completo</th><th>Grado</th><th>Grupo</th><th>Lista</th><th>Acción</th>';
+    html += '</tr></thead><tbody>';
+    
+    encontrados.forEach((alumno, idx) => {
+        const nombreCompleto = `${alumno.apellidoPaterno} ${alumno.apellidoMaterno} ${alumno.nombre}`;
+        html += `<tr>
+            <td><strong>${nombreCompleto}</strong></td>
+            <td>${alumno.grado}°</td>
+            <td>${alumno.grupo}</td>
+            <td>${alumno.lista}</td>
+            <td>
+                <button class="btn btn-small btn-success" 
+                    onclick="verAsistenciaAlumno('${alumno.apellidoPaterno}', '${alumno.apellidoMaterno}', '${alumno.nombre}', '${alumno.grado}', '${alumno.grupo}', '${alumno.escuela}')">
+                    👁️ Ver
+                </button>
+            </td>
+        </tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    
+    document.getElementById('searchResults').innerHTML = html;
+}
+
+function verAsistenciaAlumno(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela) {
+    displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela);
+}
+
+function clearSearchFields() {
+    document.getElementById('searchApellidoP').value = '';
+    document.getElementById('searchApellidoM').value = '';
+    document.getElementById('searchNombre').value = '';
+    document.getElementById('searchResults').innerHTML = '';
+}
