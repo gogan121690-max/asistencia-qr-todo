@@ -295,6 +295,11 @@ function stopListScanner() {
         html5QrCodeList.stop().then(() => {
             document.getElementById('startListBtn').disabled = false;
             document.getElementById('stopListBtn').disabled = true;
+        }).catch((err) => {
+            console.log("Error al detener:", err);
+            // Habilitar botón de inicio de todos modos
+            document.getElementById('startListBtn').disabled = false;
+            document.getElementById('stopListBtn').disabled = true;
         });
     }
 }
@@ -392,6 +397,11 @@ function startScanner() {
 function stopScanner() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => {
+            document.getElementById('startScanBtn').disabled = false;
+            document.getElementById('stopScanBtn').disabled = true;
+        }).catch((err) => {
+            console.log("Error al detener:", err);
+            // Habilitar botón de inicio de todos modos
             document.getElementById('startScanBtn').disabled = false;
             document.getElementById('stopScanBtn').disabled = true;
         });
@@ -679,6 +689,11 @@ function startSearchScanner() {
 function stopSearchScanner() {
     if (html5QrCodeSearch) {
         html5QrCodeSearch.stop().then(() => {
+            document.getElementById('startSearchBtn').disabled = false;
+            document.getElementById('stopSearchBtn').disabled = true;
+        }).catch((err) => {
+            console.log("Error al detener:", err);
+            // Habilitar botón de inicio de todos modos
             document.getElementById('startSearchBtn').disabled = false;
             document.getElementById('stopSearchBtn').disabled = true;
         });
