@@ -235,13 +235,21 @@ function startListScanner() {
         return;
     }
     
-    // Si ya existe, detenerlo primero
+    // Si ya existe, detenerlo primero y esperar
     if (html5QrCodeList) {
-        html5QrCodeList.stop().catch(() => {});
-        html5QrCodeList.clear();
-        html5QrCodeList = null;
+        html5QrCodeList.stop().then(() => {
+            html5QrCodeList = null;
+            iniciarEscanerLista();
+        }).catch(() => {
+            html5QrCodeList = null;
+            iniciarEscanerLista();
+        });
+    } else {
+        iniciarEscanerLista();
     }
-    
+}
+
+function iniciarEscanerLista() {
     // Crear nueva instancia
     html5QrCodeList = new Html5Qrcode("readerList");
     
@@ -337,11 +345,19 @@ function updateGroupFilter() {
 function startScanner() {
     // Si ya existe, detenerlo primero
     if (html5QrCode) {
-        html5QrCode.stop().catch(() => {});
-        html5QrCode.clear();
-        html5QrCode = null;
+        html5QrCode.stop().then(() => {
+            html5QrCode = null;
+            iniciarEscanerAsistencia();
+        }).catch(() => {
+            html5QrCode = null;
+            iniciarEscanerAsistencia();
+        });
+    } else {
+        iniciarEscanerAsistencia();
     }
-    
+}
+
+function iniciarEscanerAsistencia() {
     // Crear nueva instancia
     html5QrCode = new Html5Qrcode("reader");
     
@@ -683,11 +699,19 @@ function exportToExcel() {
 function startSearchScanner() {
     // Si ya existe, detenerlo primero
     if (html5QrCodeSearch) {
-        html5QrCodeSearch.stop().catch(() => {});
-        html5QrCodeSearch.clear();
-        html5QrCodeSearch = null;
+        html5QrCodeSearch.stop().then(() => {
+            html5QrCodeSearch = null;
+            iniciarEscanerBusqueda();
+        }).catch(() => {
+            html5QrCodeSearch = null;
+            iniciarEscanerBusqueda();
+        });
+    } else {
+        iniciarEscanerBusqueda();
     }
-    
+}
+
+function iniciarEscanerBusqueda() {
     // Crear nueva instancia
     html5QrCodeSearch = new Html5Qrcode("readerSearch");
     
