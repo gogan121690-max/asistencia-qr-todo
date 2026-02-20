@@ -235,9 +235,15 @@ function startListScanner() {
         return;
     }
     
-    if (!html5QrCodeList) {
-        html5QrCodeList = new Html5Qrcode("readerList");
+    // Si ya existe, detenerlo primero
+    if (html5QrCodeList) {
+        html5QrCodeList.stop().catch(() => {});
+        html5QrCodeList.clear();
+        html5QrCodeList = null;
     }
+    
+    // Crear nueva instancia
+    html5QrCodeList = new Html5Qrcode("readerList");
     
     html5QrCodeList.start(
         { facingMode: "environment" },
@@ -287,6 +293,11 @@ function startListScanner() {
     ).then(() => {
         document.getElementById('startListBtn').disabled = true;
         document.getElementById('stopListBtn').disabled = false;
+    }).catch((err) => {
+        console.error("Error al iniciar escáner:", err);
+        showAlert('❌ Error al iniciar escáner. Intenta de nuevo.', 'error');
+        document.getElementById('startListBtn').disabled = false;
+        document.getElementById('stopListBtn').disabled = true;
     });
 }
 
@@ -324,9 +335,15 @@ function updateGroupFilter() {
 }
 
 function startScanner() {
-    if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
+    // Si ya existe, detenerlo primero
+    if (html5QrCode) {
+        html5QrCode.stop().catch(() => {});
+        html5QrCode.clear();
+        html5QrCode = null;
     }
+    
+    // Crear nueva instancia
+    html5QrCode = new Html5Qrcode("reader");
     
     const selectedGroup = document.getElementById('scannerGroupFilter').value;
     
@@ -391,7 +408,13 @@ function startScanner() {
     ).then(() => {
         document.getElementById('startScanBtn').disabled = true;
         document.getElementById('stopScanBtn').disabled = false;
+    }).catch((err) => {
+        console.error("Error al iniciar escáner:", err);
+        showAlert('❌ Error al iniciar escáner. Intenta de nuevo.', 'error');
+        document.getElementById('startScanBtn').disabled = false;
+        document.getElementById('stopScanBtn').disabled = true;
     });
+}
 }
 
 function stopScanner() {
@@ -658,9 +681,15 @@ function exportToExcel() {
 // ========== BÚSQUEDA ==========
 
 function startSearchScanner() {
-    if (!html5QrCodeSearch) {
-        html5QrCodeSearch = new Html5Qrcode("readerSearch");
+    // Si ya existe, detenerlo primero
+    if (html5QrCodeSearch) {
+        html5QrCodeSearch.stop().catch(() => {});
+        html5QrCodeSearch.clear();
+        html5QrCodeSearch = null;
     }
+    
+    // Crear nueva instancia
+    html5QrCodeSearch = new Html5Qrcode("readerSearch");
     
     html5QrCodeSearch.start(
         { facingMode: "environment" },
@@ -683,6 +712,11 @@ function startSearchScanner() {
     ).then(() => {
         document.getElementById('startSearchBtn').disabled = true;
         document.getElementById('stopSearchBtn').disabled = false;
+    }).catch((err) => {
+        console.error("Error al iniciar escáner:", err);
+        showAlert('❌ Error al iniciar escáner. Intenta de nuevo.', 'error');
+        document.getElementById('startSearchBtn').disabled = false;
+        document.getElementById('stopSearchBtn').disabled = true;
     });
 }
 
