@@ -1,4 +1,9 @@
 // ========== FUNCIONES DE PASE DE LISTA ==========
+let lastScannedQR = '';
+let lastScanTime = 0;
+const SCAN_DELAY = 2000; // 2 segundos entre escaneos del mismo QR
+
+// ========== FUNCIONES DE PASE DE LISTA ==========
 
 function updateListNamePreview() {
     const grado = document.getElementById('listGrade').value.trim().toUpperCase();
@@ -236,8 +241,16 @@ function startListScanner() {
     
     html5QrCodeList.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { fps: 20, qrbox: 350 },
         (text) => {
+            // Control de escaneos duplicados
+            const now = Date.now();
+            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+                return; // Ignorar si es el mismo QR en menos de 2 segundos
+            }
+            lastScannedQR = text;
+            lastScanTime = now;
+            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
@@ -314,8 +327,16 @@ function startScanner() {
     
     html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { fps: 20, qrbox: 350 },
         (text) => {
+            // Control de escaneos duplicados
+            const now = Date.now();
+            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+                return; // Ignorar si es el mismo QR en menos de 2 segundos
+            }
+            lastScannedQR = text;
+            lastScanTime = now;
+            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
@@ -633,8 +654,16 @@ function startSearchScanner() {
     
     html5QrCodeSearch.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { fps: 20, qrbox: 350 },
         (text) => {
+            // Control de escaneos duplicados
+            const now = Date.now();
+            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+                return; // Ignorar si es el mismo QR en menos de 2 segundos
+            }
+            lastScannedQR = text;
+            lastScanTime = now;
+            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
