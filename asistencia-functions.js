@@ -1,9 +1,4 @@
 // ========== FUNCIONES DE PASE DE LISTA ==========
-let lastScannedQR = '';
-let lastScanTime = 0;
-const SCAN_DELAY = 2000; // 2 segundos entre escaneos del mismo QR
-
-// ========== FUNCIONES DE PASE DE LISTA ==========
 
 function updateListNamePreview() {
     const grado = document.getElementById('listGrade').value.trim().toUpperCase();
@@ -42,11 +37,8 @@ function createNewListAuto() {
     currentListStudents = [];
     
     localStorage.setItem('savedLists', JSON.stringify(savedLists));
-    
-    // Sincronizar con Firebase
     syncListsToFirebase();
     
-    // Limpiar formulario
     document.getElementById('listGrade').value = '';
     document.getElementById('listGroup').value = '';
     document.getElementById('listSubject').value = '';
@@ -105,7 +97,6 @@ function deleteCurrentList() {
     delete savedLists[currentList];
     localStorage.setItem('savedLists', JSON.stringify(savedLists));
     
-    // Eliminar de Firebase
     if (isFirebaseEnabled) {
         db.collection('listas').doc(currentList).delete();
     }
@@ -126,7 +117,6 @@ function displayListStudents() {
         return;
     }
     
-    // Ordenar alfabéticamente
     const sorted = [...currentListStudents].sort((a, b) => {
         const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`.toLowerCase();
         const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`.toLowerCase();
@@ -235,36 +225,14 @@ function startListScanner() {
         return;
     }
     
-    // Si ya existe, detenerlo primero y esperar
-    if (html5QrCodeList) {
-        html5QrCodeList.stop().then(() => {
-            html5QrCodeList = null;
-            iniciarEscanerLista();
-        }).catch(() => {
-            html5QrCodeList = null;
-            iniciarEscanerLista();
-        });
-    } else {
-        iniciarEscanerLista();
+    if (!html5QrCodeList) {
+        html5QrCodeList = new Html5Qrcode("readerList");
     }
-}
-
-function iniciarEscanerLista() {
-    // Crear nueva instancia
-    html5QrCodeList = new Html5Qrcode("readerList");
     
     html5QrCodeList.start(
         { facingMode: "environment" },
-        { fps: 20, qrbox: 350 },
+        { fps: 10, qrbox: 250 },
         (text) => {
-            // Control de escaneos duplicados
-            const now = Date.now();
-            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
-                return; // Ignorar si es el mismo QR en menos de 2 segundos
-            }
-            lastScannedQR = text;
-            lastScanTime = now;
-            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
@@ -301,11 +269,6 @@ function iniciarEscanerLista() {
     ).then(() => {
         document.getElementById('startListBtn').disabled = true;
         document.getElementById('stopListBtn').disabled = false;
-    }).catch((err) => {
-        console.error("Error al iniciar escáner:", err);
-        showAlert('❌ Error al iniciar escáner. Intenta de nuevo.', 'error');
-        document.getElementById('startListBtn').disabled = false;
-        document.getElementById('stopListBtn').disabled = true;
     });
 }
 
@@ -314,9 +277,7 @@ function stopListScanner() {
         html5QrCodeList.stop().then(() => {
             document.getElementById('startListBtn').disabled = false;
             document.getElementById('stopListBtn').disabled = true;
-        }).catch((err) => {
-            console.log("Error al detener:", err);
-            // Habilitar botón de inicio de todos modos
+        }).catch(() => {
             document.getElementById('startListBtn').disabled = false;
             document.getElementById('stopListBtn').disabled = true;
         });
@@ -343,38 +304,16 @@ function updateGroupFilter() {
 }
 
 function startScanner() {
-    // Si ya existe, detenerlo primero
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            html5QrCode = null;
-            iniciarEscanerAsistencia();
-        }).catch(() => {
-            html5QrCode = null;
-            iniciarEscanerAsistencia();
-        });
-    } else {
-        iniciarEscanerAsistencia();
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
     }
-}
-
-function iniciarEscanerAsistencia() {
-    // Crear nueva instancia
-    html5QrCode = new Html5Qrcode("reader");
     
     const selectedGroup = document.getElementById('scannerGroupFilter').value;
     
     html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 20, qrbox: 350 },
+        { fps: 10, qrbox: 250 },
         (text) => {
-            // Control de escaneos duplicados
-            const now = Date.now();
-            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
-                return; // Ignorar si es el mismo QR en menos de 2 segundos
-            }
-            lastScannedQR = text;
-            lastScanTime = now;
-            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
@@ -385,7 +324,6 @@ function iniciarEscanerAsistencia() {
                     return;
                 }
                 
-                // Verificar si ya tomó asistencia hoy
                 const now = new Date();
                 const today = now.toLocaleDateString('es-MX');
                 
@@ -424,11 +362,6 @@ function iniciarEscanerAsistencia() {
     ).then(() => {
         document.getElementById('startScanBtn').disabled = true;
         document.getElementById('stopScanBtn').disabled = false;
-    }).catch((err) => {
-        console.error("Error al iniciar escáner:", err);
-        showAlert('❌ Error al iniciar escáner. Intenta de nuevo.', 'error');
-        document.getElementById('startScanBtn').disabled = false;
-        document.getElementById('stopScanBtn').disabled = true;
     });
 }
 
@@ -437,9 +370,7 @@ function stopScanner() {
         html5QrCode.stop().then(() => {
             document.getElementById('startScanBtn').disabled = false;
             document.getElementById('stopScanBtn').disabled = true;
-        }).catch((err) => {
-            console.log("Error al detener:", err);
-            // Habilitar botón de inicio de todos modos
+        }).catch(() => {
             document.getElementById('startScanBtn').disabled = false;
             document.getElementById('stopScanBtn').disabled = true;
         });
@@ -449,7 +380,6 @@ function stopScanner() {
 // ========== REGISTROS ==========
 
 function displayRecords() {
-    // Actualizar selector de listas
     const select = document.getElementById('recordsListFilter');
     if (select) {
         const currentValue = select.value;
@@ -472,12 +402,10 @@ function displayRecordsByList() {
     const selectedList = document.getElementById('recordsListFilter')?.value;
     
     if (!selectedList) {
-        // Mostrar todos los registros (tabla simple)
         displayAllRecords();
         return;
     }
     
-    // Obtener alumnos de la lista
     const alumnos = savedLists[selectedList] || [];
     
     if (alumnos.length === 0) {
@@ -485,12 +413,10 @@ function displayRecordsByList() {
         return;
     }
     
-    // Obtener todas las fechas únicas de asistencia para esta lista
     const fechas = new Set();
     const asistenciasPorAlumnoYFecha = {};
     
     attendanceRecords.forEach(record => {
-        // Verificar si el alumno pertenece a esta lista
         const alumnoEnLista = alumnos.find(a => 
             a.nombre === record.nombre &&
             a.apellidoPaterno === record.apellidoPaterno &&
@@ -518,7 +444,6 @@ function displayRecordsByList() {
         return;
     }
     
-    // Crear tabla
     let html = '<table><thead><tr>';
     html += '<th>Nombre del alumno</th>';
     
@@ -529,7 +454,6 @@ function displayRecordsByList() {
     html += '<th style="text-align: center; background: #fff3cd;">Total de Faltas</th>';
     html += '</tr></thead><tbody>';
     
-    // Ordenar alumnos alfabéticamente
     const alumnosOrdenados = [...alumnos].sort((a, b) => {
         const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
         const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
@@ -589,7 +513,6 @@ function displayAllRecords() {
         return;
     }
     
-    // Tabla simple con todos los registros
     let html = '<table><thead><tr>';
     html += '<th>Fecha</th><th>Hora</th><th>Nombre</th><th>Grado</th><th>Grupo</th><th>Escuela</th>';
     html += '</tr></thead><tbody>';
@@ -651,7 +574,6 @@ function clearAllRecords() {
     attendanceRecords = [];
     localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
     
-    // Limpiar Firebase
     if (isFirebaseEnabled) {
         db.collection('asistencias').get().then((snapshot) => {
             snapshot.forEach((doc) => {
@@ -696,36 +618,14 @@ function exportToExcel() {
 // ========== BÚSQUEDA ==========
 
 function startSearchScanner() {
-    // Si ya existe, detenerlo primero
-    if (html5QrCodeSearch) {
-        html5QrCodeSearch.stop().then(() => {
-            html5QrCodeSearch = null;
-            iniciarEscanerBusqueda();
-        }).catch(() => {
-            html5QrCodeSearch = null;
-            iniciarEscanerBusqueda();
-        });
-    } else {
-        iniciarEscanerBusqueda();
+    if (!html5QrCodeSearch) {
+        html5QrCodeSearch = new Html5Qrcode("readerSearch");
     }
-}
-
-function iniciarEscanerBusqueda() {
-    // Crear nueva instancia
-    html5QrCodeSearch = new Html5Qrcode("readerSearch");
     
     html5QrCodeSearch.start(
         { facingMode: "environment" },
-        { fps: 20, qrbox: 350 },
+        { fps: 10, qrbox: 250 },
         (text) => {
-            // Control de escaneos duplicados
-            const now = Date.now();
-            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
-                return; // Ignorar si es el mismo QR en menos de 2 segundos
-            }
-            lastScannedQR = text;
-            lastScanTime = now;
-            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
@@ -735,11 +635,6 @@ function iniciarEscanerBusqueda() {
     ).then(() => {
         document.getElementById('startSearchBtn').disabled = true;
         document.getElementById('stopSearchBtn').disabled = false;
-    }).catch((err) => {
-        console.error("Error al iniciar escáner:", err);
-        showAlert('❌ Error al iniciar escáner. Intenta de nuevo.', 'error');
-        document.getElementById('startSearchBtn').disabled = false;
-        document.getElementById('stopSearchBtn').disabled = true;
     });
 }
 
@@ -748,9 +643,7 @@ function stopSearchScanner() {
         html5QrCodeSearch.stop().then(() => {
             document.getElementById('startSearchBtn').disabled = false;
             document.getElementById('stopSearchBtn').disabled = true;
-        }).catch((err) => {
-            console.log("Error al detener:", err);
-            // Habilitar botón de inicio de todos modos
+        }).catch(() => {
             document.getElementById('startSearchBtn').disabled = false;
             document.getElementById('stopSearchBtn').disabled = true;
         });
@@ -761,7 +654,6 @@ function stopSearchScanner() {
 
 function toggleAsistencia(apellidoPaterno, apellidoMaterno, nombre, fecha, marcarAsistencia) {
     if (marcarAsistencia) {
-        // Agregar asistencia
         const today = new Date();
         const newRecord = {
             apellidoPaterno,
@@ -775,7 +667,6 @@ function toggleAsistencia(apellidoPaterno, apellidoMaterno, nombre, fecha, marca
             timestamp: today
         };
         
-        // Buscar datos del alumno en las listas
         Object.values(savedLists).forEach(lista => {
             const alumno = lista.find(a => 
                 a.apellidoPaterno === apellidoPaterno &&
@@ -795,7 +686,6 @@ function toggleAsistencia(apellidoPaterno, apellidoMaterno, nombre, fecha, marca
         syncAttendanceToFirebase();
         showAlert(`✅ Asistencia agregada`, 'success');
     } else {
-        // Quitar asistencia
         const index = attendanceRecords.findIndex(r => 
             r.apellidoPaterno === apellidoPaterno &&
             r.apellidoMaterno === apellidoMaterno &&
@@ -812,13 +702,11 @@ function toggleAsistencia(apellidoPaterno, apellidoMaterno, nombre, fecha, marca
         }
     }
     
-    // Actualizar tabla
     displayRecordsByList();
 }
 
 function toggleAsistenciaSearch(apellidoPaterno, apellidoMaterno, nombre, fecha, grado, grupo, escuela, marcarAsistencia) {
     if (marcarAsistencia) {
-        // Agregar asistencia
         const today = new Date();
         const newRecord = {
             apellidoPaterno,
@@ -838,7 +726,6 @@ function toggleAsistenciaSearch(apellidoPaterno, apellidoMaterno, nombre, fecha,
         syncAttendanceToFirebase();
         showAlert(`✅ Asistencia agregada`, 'success');
     } else {
-        // Quitar asistencia
         const index = attendanceRecords.findIndex(r => 
             r.apellidoPaterno === apellidoPaterno &&
             r.apellidoMaterno === apellidoMaterno &&
@@ -855,14 +742,12 @@ function toggleAsistenciaSearch(apellidoPaterno, apellidoMaterno, nombre, fecha,
         }
     }
     
-    // Actualizar tabla
     displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela);
 }
 
 function displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela) {
     const results = document.getElementById('searchResults');
     
-    // Obtener todas las fechas únicas en el sistema
     const todasLasFechas = new Set();
     attendanceRecords.forEach(r => todasLasFechas.add(r.fecha));
     
@@ -880,7 +765,6 @@ function displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre,
         return;
     }
     
-    // Verificar en qué fechas asistió
     const asistencias = {};
     attendanceRecords.forEach(r => {
         if (r.apellidoPaterno === apellidoPaterno && 
@@ -992,7 +876,6 @@ function searchByText() {
         return;
     }
     
-    // Buscar en todas las listas
     let encontrados = [];
     
     Object.keys(savedLists).forEach(listaName => {
@@ -1025,7 +908,6 @@ function searchByText() {
         return;
     }
     
-    // Si solo hay 1 resultado, mostrar su tabla completa
     if (encontrados.length === 1) {
         const alumno = encontrados[0];
         displayStudentAttendanceTable(
@@ -1039,7 +921,6 @@ function searchByText() {
         return;
     }
     
-    // Si hay múltiples resultados, mostrar lista para seleccionar
     let html = `<h3 style="text-align:center; color:#667eea; margin: 20px 0;">
         📋 ${encontrados.length} alumno${encontrados.length > 1 ? 's' : ''} encontrado${encontrados.length > 1 ? 's' : ''}
     </h3>`;
