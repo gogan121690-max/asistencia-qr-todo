@@ -431,7 +431,6 @@ function iniciarEscanerAsistencia() {
         document.getElementById('stopScanBtn').disabled = true;
     });
 }
-}
 
 function stopScanner() {
     if (html5QrCode) {
