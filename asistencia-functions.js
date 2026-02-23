@@ -132,20 +132,21 @@ function displayListStudents() {
     html += '<th>Acciones</th>';
     html += '</tr></thead><tbody>';
     
-    sorted.forEach((student, idx) => {
+    sorted.forEach((student, displayIdx) => {
+        // Encontrar índice real en currentListStudents
+        const realIdx = currentListStudents.findIndex(s => 
+            s.nombre === student.nombre &&
+            s.apellidoPaterno === student.apellidoPaterno &&
+            s.apellidoMaterno === student.apellidoMaterno
+        );
+        
         html += '<tr>';
-        html += `<td>
-            ${idx + 1}
-            <div style="display:inline-block; margin-left:5px;">
-                <button onclick="moveStudentUp(${idx})" class="btn btn-small" ${idx === 0 ? 'disabled' : ''} title="Subir">⬆️</button>
-                <button onclick="moveStudentDown(${idx})" class="btn btn-small" ${idx === sorted.length - 1 ? 'disabled' : ''} title="Bajar">⬇️</button>
-            </div>
-        </td>`;
+        html += `<td>${displayIdx + 1}</td>`;
         html += `<td><strong>${student.apellidoPaterno} ${student.apellidoMaterno} ${student.nombre}</strong></td>`;
         html += `<td>${student.grado}°</td>`;
         html += `<td>${student.grupo}</td>`;
         html += `<td>${student.fechaAgregado || 'N/A'}</td>`;
-        html += `<td><button onclick="removeStudentFromList(${idx})" class="btn btn-secondary btn-small">🗑️</button></td>`;
+        html += `<td><button onclick="removeStudentFromList(${realIdx})" class="btn btn-secondary btn-small">🗑️</button></td>`;
         html += '</tr>';
     });
     
@@ -231,7 +232,7 @@ function startListScanner() {
     
     html5QrCodeList.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { fps: 20, qrbox: 300 },
         (text) => {
             const data = text.split(',');
             if (data.length === 6) {
@@ -312,7 +313,7 @@ function startScanner() {
     
     html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { fps: 20, qrbox: 300 },
         (text) => {
             const data = text.split(',');
             if (data.length === 6) {
@@ -624,7 +625,7 @@ function startSearchScanner() {
     
     html5QrCodeSearch.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { fps: 20, qrbox: 300 },
         (text) => {
             const data = text.split(',');
             if (data.length === 6) {
