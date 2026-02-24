@@ -352,11 +352,27 @@
                 </div>
 
                 <div id="qrScannerSection" style="display:none; margin: 30px 0;">
+                    <!-- Campo para Escáner USB -->
+                    <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0; color: #1976d2;">🖨️ Escáner USB / Lector de Código</h3>
+                        <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #666;">Haz click en el campo y escanea con tu lector USB</p>
+                        <input type="text" 
+                            id="usbScannerInputCalificaciones" 
+                            placeholder="Click aquí y escanea con tu lector USB..." 
+                            style="width: 100%; padding: 15px; font-size: 1.1em; border: 3px solid #1976d2; border-radius: 5px; text-align: center; font-weight: bold;"
+                            autocomplete="off">
+                    </div>
+
+                    <!-- Separador -->
+                    <div style="text-align: center; margin: 20px 0;">
+                        <p style="color: #999; font-weight: bold;">───── O usa la Cámara ─────</p>
+                    </div>
+
                     <h3 style="text-align:center; color:#28a745;">📷 Escanea QR del Alumno</h3>
                     <div id="readerCalificar" style="width: 100%; max-width: 500px; margin: 20px auto;"></div>
                     
                     <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0; flex-wrap: wrap;">
-                        <button class="btn" id="startCalificarBtn" onclick="startCalificarScanner()">▶️ Iniciar Escáner</button>
+                        <button class="btn" id="startCalificarBtn" onclick="startCalificarScanner()">▶️ Iniciar Cámara</button>
                         <button class="btn btn-secondary" id="stopCalificarBtn" onclick="stopCalificarScanner()" disabled>⏹️ Detener</button>
                     </div>
 
@@ -817,6 +833,47 @@
 
             // Scroll hacia el escáner
             document.getElementById('currentStudentInfo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // ========== ESCÁNER USB PARA CALIFICACIONES ==========
+        window.addEventListener('DOMContentLoaded', function() {
+            const usbInput = document.getElementById('usbScannerInputCalificaciones');
+            if (usbInput) {
+                usbInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        processUSBScanCalificaciones(this.value.trim());
+                        this.value = '';
+                    }
+                });
+                
+                let timeout;
+                usbInput.addEventListener('input', function() {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        if (this.value.length > 0) {
+                            processUSBScanCalificaciones(this.value.trim());
+                            this.value = '';
+                        }
+                    }, 2000);
+                });
+            }
+        });
+
+        function processUSBScanCalificaciones(text) {
+            if (!text || !currentCalificarLista || !currentCalificarActividad) {
+                if (!currentCalificarLista || !currentCalificarActividad) {
+                    showAlert('❌ Selecciona una lista y actividad primero', 'error');
+                }
+                return;
+            }
+            
+            const data = text.split(',');
+            if (data.length === 6) {
+                handleScannedStudent(data);
+            } else {
+                showAlert('❌ Código QR inválido', 'error');
+            }
         }
     </script>
 </body>
