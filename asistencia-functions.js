@@ -28,6 +28,39 @@ function playBeep() {
     }
 }
 
+// Función para reproducir sonido de ÉXITO (doble beep más agudo)
+function playSuccessBeep() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Primer beep
+        const osc1 = audioContext.createOscillator();
+        const gain1 = audioContext.createGain();
+        osc1.connect(gain1);
+        gain1.connect(audioContext.destination);
+        osc1.frequency.value = 1000; // Más agudo
+        osc1.type = 'sine';
+        gain1.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+        osc1.start(audioContext.currentTime);
+        osc1.stop(audioContext.currentTime + 0.08);
+        
+        // Segundo beep (más agudo aún)
+        const osc2 = audioContext.createOscillator();
+        const gain2 = audioContext.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioContext.destination);
+        osc2.frequency.value = 1200; // Aún más agudo
+        osc2.type = 'sine';
+        gain2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.1);
+        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.18);
+        osc2.start(audioContext.currentTime + 0.1);
+        osc2.stop(audioContext.currentTime + 0.18);
+    } catch (e) {
+        console.log('No se pudo reproducir sonido:', e);
+    }
+}
+
 // ========== FUNCIONES DE PASE DE LISTA ==========
 
 function updateListNamePreview() {
@@ -413,8 +446,8 @@ function startScanner() {
                 localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
                 syncAttendanceToFirebase();
                 
-                // Reproducir sonido
-                playBeep();
+                // Reproducir sonido de ÉXITO
+                playSuccessBeep();
                 
                 showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre}`, 'success');
                 updateGroupFilter();
@@ -1128,8 +1161,8 @@ function processUSBScan(text) {
         localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
         syncAttendanceToFirebase();
         
-        // Reproducir sonido
-        playBeep();
+        // Reproducir sonido de ÉXITO
+        playSuccessBeep();
         
         showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre}`, 'success');
         updateGroupFilter();
