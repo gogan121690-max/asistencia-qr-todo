@@ -1034,3 +1034,107 @@ function clearSearchFields() {
     document.getElementById('searchNombre').value = '';
     document.getElementById('searchResults').innerHTML = '';
 }
+
+// ========== ESCÁNER USB PARA ASISTENCIA ==========
+
+// Configurar el campo de escáner USB cuando cargue la página
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', function() {
+        const usbInput = document.getElementById('usbScannerInput');
+        if (usbInput) {
+            usbInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    processUSBScan(this.value.trim());
+                    this.value = ''; // Limpiar campo
+                }
+            });
+            
+            // Auto-limpiar después de 2 segundos de inactividad
+            let timeout;
+            usbInput.addEventListener('input', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    if (this.value.length > 0) {
+                        processUSBScan(this.value.trim());
+                        this.value = '';
+                    }
+                }, 2000);
+            });
+        }
+    });
+}
+
+function processUSBScan(text) {
+    if (!text) return;
+    
+    const selectedGroup = document.getElementById('scannerGroupFilter').value;
+    const data = text.split(',');
+    
+    if (data.length === 6) {
+        const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
+        
+        // Control de escaneos duplicados
+        const now = Date.now();
+        if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+            return; // Ignorar duplicado
+        }
+        lastScannedQR = text;
+        lastScanTime = now;
+        
+        // Verificar si está en la lista seleccionada
+        if (selectedGroup) {
+            const alumnosEnLista = savedLists[selectedGroup] || [];
+            const alumnoEnLista = alumnosEnLista.find(a => 
+                a.nombre === nombre &&
+                a.apellidoPaterno === apellidoPaterno &&
+                a.apellidoMaterno === apellidoMaterno
+            );
+            
+            if (!alumnoEnLista) {
+                showAlert(`❌ Este alumno NO está en la lista "${selectedGroup}"`, 'error');
+                return;
+            }
+        }
+        
+        // Verificar si ya tomó asistencia hoy
+        const today = new Date().toLocaleDateString('es-MX');
+        const yaRegistrado = attendanceRecords.find(r => 
+            r.nombre === nombre &&
+            r.apellidoPaterno === apellidoPaterno &&
+            r.apellidoMaterno === apellidoMaterno &&
+            r.fecha === today
+        );
+        
+        if (yaRegistrado) {
+            showAlert(`⚠️ ${apellidoPaterno} ${apellidoMaterno} ${nombre} ya tomó asistencia hoy a las ${yaRegistrado.hora}`, 'error');
+            return;
+        }
+        
+        // Registrar asistencia
+        const nowDate = new Date();
+        const record = {
+            nombre,
+            apellidoPaterno,
+            apellidoMaterno,
+            grado,
+            grupo,
+            escuela,
+            fecha: today,
+            hora: nowDate.toLocaleTimeString('es-MX')
+        };
+        
+        attendanceRecords.push(record);
+        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        syncAttendanceToFirebase();
+        
+        // Reproducir sonido
+        playBeep();
+        
+        showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre}`, 'success');
+        updateGroupFilter();
+        displayRecords();
+    } else {
+        showAlert('❌ Código QR inválido. Formato: Apellido1,Apellido2,Nombre,Grado,Grupo,Escuela', 'error');
+    }
+}
