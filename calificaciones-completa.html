@@ -757,10 +757,13 @@
             currentScannedStudent = null;
             displayCalificacionesTable();
             
-            // Reiniciar escáner
+            // Enfocar campo USB para siguiente escaneo (en lugar de reiniciar cámara)
             setTimeout(() => {
-                startCalificarScanner();
-            }, 1000);
+                const usbInput = document.getElementById('usbScannerInputCalificaciones');
+                if (usbInput) {
+                    usbInput.focus();
+                }
+            }, 500);
         }
 
         function displayCalificacionesTable() {
