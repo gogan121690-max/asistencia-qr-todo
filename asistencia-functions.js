@@ -1,3 +1,33 @@
+// ========== CONTROL DE ESCANEO Y SONIDO ==========
+
+// Variables para control de escaneos duplicados
+let lastScannedQR = '';
+let lastScanTime = 0;
+const SCAN_DELAY = 500; // Reducido a 0.5 segundos
+
+// Función para reproducir sonido de beep
+function playBeep() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800; // Frecuencia del beep
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+    } catch (e) {
+        console.log('No se pudo reproducir sonido:', e);
+    }
+}
+
 // ========== FUNCIONES DE PASE DE LISTA ==========
 
 function updateListNamePreview() {
@@ -234,6 +264,14 @@ function startListScanner() {
         { facingMode: "environment" },
         { fps: 20, qrbox: 300 },
         (text) => {
+            // Control de escaneos duplicados
+            const now = Date.now();
+            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+                return; // Ignorar si es el mismo QR en menos de 0.5 segundos
+            }
+            lastScannedQR = text;
+            lastScanTime = now;
+            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
@@ -262,6 +300,9 @@ function startListScanner() {
                 savedLists[currentList] = currentListStudents;
                 localStorage.setItem('savedLists', JSON.stringify(savedLists));
                 syncListsToFirebase();
+                
+                // Reproducir sonido
+                playBeep();
                 
                 showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre}`, 'success');
                 displayListStudents();
@@ -315,6 +356,14 @@ function startScanner() {
         { facingMode: "environment" },
         { fps: 20, qrbox: 300 },
         (text) => {
+            // Control de escaneos duplicados
+            const now = Date.now();
+            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+                return; // Ignorar si es el mismo QR en menos de 0.5 segundos
+            }
+            lastScannedQR = text;
+            lastScanTime = now;
+            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
@@ -354,6 +403,9 @@ function startScanner() {
                 attendanceRecords.push(record);
                 localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
                 syncAttendanceToFirebase();
+                
+                // Reproducir sonido
+                playBeep();
                 
                 showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre} - ${groupKey}`, 'success');
                 updateGroupFilter();
@@ -627,9 +679,21 @@ function startSearchScanner() {
         { facingMode: "environment" },
         { fps: 20, qrbox: 300 },
         (text) => {
+            // Control de escaneos duplicados
+            const now = Date.now();
+            if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+                return; // Ignorar si es el mismo QR en menos de 0.5 segundos
+            }
+            lastScannedQR = text;
+            lastScanTime = now;
+            
             const data = text.split(',');
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
+                
+                // Reproducir sonido
+                playBeep();
+                
                 displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela);
             }
         }
