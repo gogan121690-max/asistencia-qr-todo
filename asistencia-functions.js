@@ -368,10 +368,19 @@ function startScanner() {
             if (data.length === 6) {
                 const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
                 
-                const groupKey = `${grado}°${grupo}`;
-                if (selectedGroup && selectedGroup !== groupKey) {
-                    showAlert(`❌ Este alumno es de ${groupKey}, no de ${selectedGroup}`, 'error');
-                    return;
+                // Si hay lista seleccionada, verificar que el alumno esté en esa lista
+                if (selectedGroup) {
+                    const alumnosEnLista = savedLists[selectedGroup] || [];
+                    const alumnoEnLista = alumnosEnLista.find(a => 
+                        a.nombre === nombre &&
+                        a.apellidoPaterno === apellidoPaterno &&
+                        a.apellidoMaterno === apellidoMaterno
+                    );
+                    
+                    if (!alumnoEnLista) {
+                        showAlert(`❌ Este alumno NO está en la lista "${selectedGroup}"`, 'error');
+                        return;
+                    }
                 }
                 
                 const now = new Date();
@@ -407,7 +416,7 @@ function startScanner() {
                 // Reproducir sonido
                 playBeep();
                 
-                showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre} - ${groupKey}`, 'success');
+                showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre}`, 'success');
                 updateGroupFilter();
                 displayRecords();
             }
