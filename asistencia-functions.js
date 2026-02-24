@@ -1138,3 +1138,150 @@ function processUSBScan(text) {
         showAlert('❌ Código QR inválido. Formato: Apellido1,Apellido2,Nombre,Grado,Grupo,Escuela', 'error');
     }
 }
+
+// ========== ESCÁNER USB PARA PASE DE LISTA ==========
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', function() {
+        const usbInputLista = document.getElementById('usbScannerInputLista');
+        if (usbInputLista) {
+            usbInputLista.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    processUSBScanLista(this.value.trim());
+                    this.value = '';
+                }
+            });
+            
+            let timeout;
+            usbInputLista.addEventListener('input', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    if (this.value.length > 0) {
+                        processUSBScanLista(this.value.trim());
+                        this.value = '';
+                    }
+                }, 2000);
+            });
+        }
+    });
+}
+
+function processUSBScanLista(text) {
+    if (!text) return;
+    
+    if (!currentList) {
+        showAlert('❌ Selecciona una lista primero', 'error');
+        return;
+    }
+    
+    const data = text.split(',');
+    if (data.length === 6) {
+        const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
+        
+        // Control de duplicados
+        const now = Date.now();
+        if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+            return;
+        }
+        lastScannedQR = text;
+        lastScanTime = now;
+        
+        // Verificar si ya existe
+        const exists = currentListStudents.some(s => 
+            s.nombre === nombre && 
+            s.apellidoPaterno === apellidoPaterno && 
+            s.apellidoMaterno === apellidoMaterno
+        );
+        
+        if (exists) {
+            showAlert('⚠️ Ya está en la lista', 'error');
+            return;
+        }
+        
+        // Agregar a la lista
+        currentListStudents.push({
+            nombre,
+            apellidoPaterno,
+            apellidoMaterno,
+            grado,
+            grupo,
+            escuela,
+            fechaAgregado: new Date().toLocaleDateString('es-MX')
+        });
+        
+        savedLists[currentList] = currentListStudents;
+        localStorage.setItem('savedLists', JSON.stringify(savedLists));
+        syncListsToFirebase();
+        
+        // Sonido y actualizar
+        playBeep();
+        showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre}`, 'success');
+        displayListStudents();
+        
+        // Reenfocar campo USB
+        setTimeout(() => {
+            document.getElementById('usbScannerInputLista').focus();
+        }, 300);
+    } else {
+        showAlert('❌ Código QR inválido', 'error');
+    }
+}
+
+// ========== ESCÁNER USB PARA BÚSQUEDA ==========
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', function() {
+        const usbInputBuscar = document.getElementById('usbScannerInputBuscar');
+        if (usbInputBuscar) {
+            usbInputBuscar.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    processUSBScanBuscar(this.value.trim());
+                    this.value = '';
+                }
+            });
+            
+            let timeout;
+            usbInputBuscar.addEventListener('input', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    if (this.value.length > 0) {
+                        processUSBScanBuscar(this.value.trim());
+                        this.value = '';
+                    }
+                }, 2000);
+            });
+        }
+    });
+}
+
+function processUSBScanBuscar(text) {
+    if (!text) return;
+    
+    const data = text.split(',');
+    if (data.length === 6) {
+        const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
+        
+        // Control de duplicados
+        const now = Date.now();
+        if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+            return;
+        }
+        lastScannedQR = text;
+        lastScanTime = now;
+        
+        // Sonido
+        playBeep();
+        
+        // Mostrar tabla del alumno
+        displayStudentAttendanceTable(apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela);
+        
+        // Reenfocar campo USB
+        setTimeout(() => {
+            document.getElementById('usbScannerInputBuscar').focus();
+        }, 300);
+    } else {
+        showAlert('❌ Código QR inválido', 'error');
+    }
+}
