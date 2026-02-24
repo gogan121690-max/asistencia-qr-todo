@@ -312,9 +312,26 @@
 
             <div id="listScannerSection" style="display:none;">
                 <h3 style="text-align:center;">Lista: <span id="currentListName" style="color:#667eea;"></span></h3>
+                
+                <!-- Campo para Escáner USB -->
+                <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <h3 style="margin: 0 0 10px 0; color: #1976d2;">🖨️ Escáner USB / Lector de Código</h3>
+                    <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #666;">Haz click en el campo y escanea con tu lector USB</p>
+                    <input type="text" 
+                        id="usbScannerInputLista" 
+                        placeholder="Click aquí y escanea con tu lector USB..." 
+                        style="width: 100%; padding: 15px; font-size: 1.1em; border: 3px solid #1976d2; border-radius: 5px; text-align: center; font-weight: bold;"
+                        autocomplete="off">
+                </div>
+
+                <!-- Separador -->
+                <div style="text-align: center; margin: 20px 0;">
+                    <p style="color: #999; font-weight: bold;">───── O usa la Cámara ─────</p>
+                </div>
+
                 <div id="readerList"></div>
                 <div class="scanner-controls">
-                    <button class="btn" id="startListBtn" onclick="startListScanner()">▶️ Iniciar</button>
+                    <button class="btn" id="startListBtn" onclick="startListScanner()">▶️ Iniciar Cámara</button>
                     <button class="btn btn-secondary" id="stopListBtn" onclick="stopListScanner()" disabled>⏹️ Detener</button>
                     <button class="btn btn-success" onclick="exportListToExcel()">📥 Exportar</button>
                 </div>
@@ -376,11 +393,27 @@
                 <p style="color: #999; font-weight: bold;">───── O ─────</p>
             </div>
             
+            <!-- Campo para Escáner USB -->
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                <h3 style="margin: 0 0 10px 0; color: #1976d2;">🖨️ Escáner USB / Lector de Código</h3>
+                <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #666;">Haz click en el campo y escanea con tu lector USB</p>
+                <input type="text" 
+                    id="usbScannerInputBuscar" 
+                    placeholder="Click aquí y escanea con tu lector USB..." 
+                    style="width: 100%; padding: 15px; font-size: 1.1em; border: 3px solid #1976d2; border-radius: 5px; text-align: center; font-weight: bold;"
+                    autocomplete="off">
+            </div>
+
+            <!-- Separador -->
+            <div style="text-align: center; margin: 30px 0;">
+                <p style="color: #999; font-weight: bold;">───── O ─────</p>
+            </div>
+            
             <!-- Búsqueda por QR -->
-            <h3 style="text-align:center; margin-bottom: 20px;">Escanear QR</h3>
+            <h3 style="text-align:center; margin-bottom: 20px;">Escanear con Cámara</h3>
             <div id="readerSearch"></div>
             <div class="scanner-controls">
-                <button class="btn" id="startSearchBtn" onclick="startSearchScanner()">▶️ Iniciar</button>
+                <button class="btn" id="startSearchBtn" onclick="startSearchScanner()">▶️ Iniciar Cámara</button>
                 <button class="btn btn-secondary" id="stopSearchBtn" onclick="stopSearchScanner()" disabled>⏹️ Detener</button>
             </div>
             
