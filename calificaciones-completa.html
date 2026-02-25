@@ -273,6 +273,13 @@
             th, td { padding: 8px; }
         }
     </style>
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Calificaciones QR">
 </head>
 <body>
     <div class="header">
@@ -647,6 +654,8 @@
                 (decodedText) => {
                     const data = decodedText.split(',');
                     if (data.length >= 6) {
+                        // Reproducir sonido
+                        playBeep();
                         handleScannedStudent(data);
                     }
                 }
@@ -877,6 +886,21 @@
             } else {
                 showAlert('❌ Código QR inválido', 'error');
             }
+        }
+    </script>
+    
+    <!-- Service Worker para funcionamiento OFFLINE -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado - App funciona OFFLINE');
+                    })
+                    .catch(error => {
+                        console.log('❌ Error al registrar Service Worker:', error);
+                    });
+            });
         }
     </script>
 </body>
