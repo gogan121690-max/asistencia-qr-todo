@@ -211,6 +211,13 @@
             th, td { padding: 8px; }
         }
     </style>
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Asistencia QR">
 </head>
 <body>
     <div class="header">
@@ -595,6 +602,21 @@
             alert.textContent = message;
             alert.className = `alert alert-${type} show`;
             setTimeout(() => alert.classList.remove('show'), 3000);
+        }
+    </script>
+    
+    <!-- Service Worker para funcionamiento OFFLINE -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado - App funciona OFFLINE');
+                    })
+                    .catch(error => {
+                        console.log('❌ Error al registrar Service Worker:', error);
+                    });
+            });
         }
     </script>
 </body>
