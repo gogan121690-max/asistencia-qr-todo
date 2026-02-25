@@ -5,7 +5,7 @@ let lastScannedQR = '';
 let lastScanTime = 0;
 const SCAN_DELAY = 500; // Reducido a 0.5 segundos
 
-// Función para reproducir sonido de beep
+// Función para reproducir sonido de beep (VOLUMEN MÁXIMO)
 function playBeep() {
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -18,17 +18,17 @@ function playBeep() {
         oscillator.frequency.value = 800; // Frecuencia del beep
         oscillator.type = 'sine';
         
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(1.0, audioContext.currentTime); // VOLUMEN MÁXIMO
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
         
         oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
+        oscillator.stop(audioContext.currentTime + 0.15);
     } catch (e) {
         console.log('No se pudo reproducir sonido:', e);
     }
 }
 
-// Función para reproducir sonido de ÉXITO (doble beep más agudo)
+// Función para reproducir sonido de ÉXITO (doble beep más agudo - VOLUMEN MÁXIMO)
 function playSuccessBeep() {
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -40,10 +40,10 @@ function playSuccessBeep() {
         gain1.connect(audioContext.destination);
         osc1.frequency.value = 1000; // Más agudo
         osc1.type = 'sine';
-        gain1.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+        gain1.gain.setValueAtTime(1.0, audioContext.currentTime); // VOLUMEN MÁXIMO
+        gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
         osc1.start(audioContext.currentTime);
-        osc1.stop(audioContext.currentTime + 0.08);
+        osc1.stop(audioContext.currentTime + 0.1);
         
         // Segundo beep (más agudo aún)
         const osc2 = audioContext.createOscillator();
@@ -52,10 +52,34 @@ function playSuccessBeep() {
         gain2.connect(audioContext.destination);
         osc2.frequency.value = 1200; // Aún más agudo
         osc2.type = 'sine';
-        gain2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.1);
-        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.18);
-        osc2.start(audioContext.currentTime + 0.1);
-        osc2.stop(audioContext.currentTime + 0.18);
+        gain2.gain.setValueAtTime(1.0, audioContext.currentTime + 0.12); // VOLUMEN MÁXIMO
+        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.22);
+        osc2.start(audioContext.currentTime + 0.12);
+        osc2.stop(audioContext.currentTime + 0.22);
+    } catch (e) {
+        console.log('No se pudo reproducir sonido:', e);
+    }
+}
+
+// Función para reproducir sonido de ERROR (triple beep grave - YA ESCANEADO)
+function playErrorBeep() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Tres beeps graves y rápidos
+        for (let i = 0; i < 3; i++) {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = 400; // Grave (error)
+            osc.type = 'square'; // Sonido más áspero
+            const startTime = audioContext.currentTime + (i * 0.15);
+            gain.gain.setValueAtTime(1.0, startTime); // VOLUMEN MÁXIMO
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+            osc.start(startTime);
+            osc.stop(startTime + 0.1);
+        }
     } catch (e) {
         console.log('No se pudo reproducir sonido:', e);
     }
@@ -411,6 +435,7 @@ function startScanner() {
                     );
                     
                     if (!alumnoEnLista) {
+                        playErrorBeep(); // Sonido de ERROR
                         showAlert(`❌ Este alumno NO está en la lista "${selectedGroup}"`, 'error');
                         return;
                     }
@@ -427,6 +452,7 @@ function startScanner() {
                 );
                 
                 if (yaRegistrado) {
+                    playErrorBeep(); // Sonido de ERROR
                     showAlert(`⚠️ ${apellidoPaterno} ${apellidoMaterno} ${nombre} ya tomó asistencia hoy a las ${yaRegistrado.hora}`, 'error');
                     return;
                 }
@@ -1125,6 +1151,7 @@ function processUSBScan(text) {
             );
             
             if (!alumnoEnLista) {
+                playErrorBeep(); // Sonido de ERROR
                 showAlert(`❌ Este alumno NO está en la lista "${selectedGroup}"`, 'error');
                 return;
             }
@@ -1140,6 +1167,7 @@ function processUSBScan(text) {
         );
         
         if (yaRegistrado) {
+            playErrorBeep(); // Sonido de ERROR
             showAlert(`⚠️ ${apellidoPaterno} ${apellidoMaterno} ${nombre} ya tomó asistencia hoy a las ${yaRegistrado.hora}`, 'error');
             return;
         }
