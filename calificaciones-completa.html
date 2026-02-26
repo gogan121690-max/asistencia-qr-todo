@@ -625,7 +625,7 @@
             const alert = document.getElementById('alert');
             alert.textContent = message;
             alert.className = `alert alert-${type} show`;
-            setTimeout(() => alert.classList.remove('show'), 3000);
+            setTimeout(() => alert.classList.remove('show'), 800); // Reducido a 0.8 segundos
         }
 
         // Variables para calificación
@@ -644,13 +644,32 @@
         }
 
         function startCalificarScanner() {
-            if (!html5QrcodeCalificar) {
-                html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
+            // Validar que hay lista y actividad seleccionadas
+            if (!currentCalificarLista || !currentCalificarActividad) {
+                showAlert('❌ Selecciona una lista y actividad primero', 'error');
+                return;
             }
+
+            // Si ya existe un escáner, detenerlo primero
+            if (html5QrcodeCalificar) {
+                html5QrcodeCalificar.stop().then(() => {
+                    iniciarNuevoEscaner();
+                }).catch(() => {
+                    // Si falla al detener, igual intentar iniciar nuevo
+                    html5QrcodeCalificar = null;
+                    iniciarNuevoEscaner();
+                });
+            } else {
+                iniciarNuevoEscaner();
+            }
+        }
+
+        function iniciarNuevoEscaner() {
+            html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
 
             html5QrcodeCalificar.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
+                { fps: 20, qrbox: 300 },
                 (decodedText) => {
                     const data = decodedText.split(',');
                     if (data.length >= 6) {
@@ -664,7 +683,9 @@
                 document.getElementById('stopCalificarBtn').disabled = false;
             }).catch(err => {
                 console.error("Error al iniciar escáner:", err);
-                showAlert('Error al iniciar escáner', 'error');
+                showAlert('❌ Error al iniciar escáner: ' + err.message, 'error');
+                document.getElementById('startCalificarBtn').disabled = false;
+                document.getElementById('stopCalificarBtn').disabled = true;
             });
         }
 
