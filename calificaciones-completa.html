@@ -679,28 +679,26 @@
         function crearYActivarEscaner() {
             console.log('Creando nueva instancia del escáner...');
             
-            try {
-                html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
-                console.log('Instancia creada exitosamente');
-            } catch (err) {
-                console.error('Error al crear instancia:', err);
-                showAlert('❌ Error al crear escáner', 'error');
-                return;
-            }
-
-            const config = {
-                fps: 30,
-                qrbox: 250,
-                aspectRatio: 1.0
-            };
-
-            console.log('Configuración del escáner:', config);
+            html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
+            console.log('Instancia creada');
 
             html5QrcodeCalificar.start(
                 { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanFailure
+                { fps: 20, qrbox: 300 },
+                (decodedText) => {
+                    console.log('🎯 QR DETECTADO:', decodedText);
+                    const data = decodedText.split(',');
+                    console.log('Datos parseados:', data);
+                    
+                    if (data.length >= 6) {
+                        console.log('✅ Formato válido');
+                        playBeep();
+                        handleScannedStudent(data);
+                    } else {
+                        console.log('❌ Formato inválido');
+                        showAlert('❌ QR inválido', 'error');
+                    }
+                }
             ).then(() => {
                 console.log('✅ Escáner iniciado exitosamente');
                 scannerActivo = true;
@@ -713,28 +711,6 @@
                 document.getElementById('stopCalificarBtn').disabled = true;
                 scannerActivo = false;
             });
-        }
-
-        function onScanSuccess(decodedText, decodedResult) {
-            console.log('🎯 QR DETECTADO:', decodedText);
-            console.log('Resultado completo:', decodedResult);
-            
-            const data = decodedText.split(',');
-            console.log('Datos parseados:', data);
-            console.log('Cantidad de campos:', data.length);
-            
-            if (data.length >= 6) {
-                console.log('✅ Formato válido');
-                playBeep();
-                handleScannedStudent(data);
-            } else {
-                console.log('❌ Formato inválido - Se esperaban 6 campos');
-                showAlert('❌ QR inválido: formato incorrecto', 'error');
-            }
-        }
-
-        function onScanFailure(error) {
-            // No hacer nada - esto se llama muchas veces mientras busca el QR
         }
 
         function stopCalificarScanner() {
