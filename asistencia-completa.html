@@ -601,7 +601,7 @@
             const alert = document.getElementById('alert');
             alert.textContent = message;
             alert.className = `alert alert-${type} show`;
-            setTimeout(() => alert.classList.remove('show'), 3000);
+            setTimeout(() => alert.classList.remove('show'), 800); // Reducido a 0.8 segundos
         }
     </script>
     
