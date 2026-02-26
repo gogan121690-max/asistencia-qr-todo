@@ -665,20 +665,28 @@
         }
 
         function iniciarNuevoEscaner() {
+            console.log('Iniciando escáner de calificaciones...');
             html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
 
             html5QrcodeCalificar.start(
                 { facingMode: "environment" },
                 { fps: 20, qrbox: 300 },
                 (decodedText) => {
+                    console.log('QR detectado:', decodedText);
                     const data = decodedText.split(',');
+                    console.log('Data parseada:', data);
                     if (data.length >= 6) {
+                        console.log('Datos válidos, reproduciendo sonido...');
                         // Reproducir sonido
                         playBeep();
                         handleScannedStudent(data);
+                    } else {
+                        console.log('Datos inválidos, menos de 6 campos');
+                        showAlert('❌ QR inválido: ' + decodedText, 'error');
                     }
                 }
             ).then(() => {
+                console.log('Escáner iniciado exitosamente');
                 document.getElementById('startCalificarBtn').disabled = true;
                 document.getElementById('stopCalificarBtn').disabled = false;
             }).catch(err => {
