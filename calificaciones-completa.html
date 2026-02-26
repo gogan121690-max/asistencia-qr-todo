@@ -633,6 +633,7 @@
         let currentScannedStudent = null;
         let currentCalificarLista = '';
         let currentCalificarActividad = '';
+        let scannerActivo = false;
 
         function showQRScannerForGrading() {
             const actividadId = document.getElementById('actividadSelect').value;
@@ -644,65 +645,111 @@
         }
 
         function startCalificarScanner() {
+            console.log('=== INICIANDO ESCÁNER ===');
+            
             // Validar que hay lista y actividad seleccionadas
             if (!currentCalificarLista || !currentCalificarActividad) {
                 showAlert('❌ Selecciona una lista y actividad primero', 'error');
+                console.log('ERROR: No hay lista o actividad seleccionada');
                 return;
             }
 
-            // Si ya existe un escáner, detenerlo primero
-            if (html5QrcodeCalificar) {
+            console.log('Lista:', currentCalificarLista);
+            console.log('Actividad:', currentCalificarActividad);
+
+            // Si ya hay un escáner activo, detenerlo primero
+            if (scannerActivo && html5QrcodeCalificar) {
+                console.log('Deteniendo escáner anterior...');
                 html5QrcodeCalificar.stop().then(() => {
-                    iniciarNuevoEscaner();
-                }).catch(() => {
-                    // Si falla al detener, igual intentar iniciar nuevo
+                    console.log('Escáner anterior detenido');
+                    scannerActivo = false;
                     html5QrcodeCalificar = null;
-                    iniciarNuevoEscaner();
+                    setTimeout(() => crearYActivarEscaner(), 500);
+                }).catch(err => {
+                    console.log('Error al detener escáner anterior:', err);
+                    scannerActivo = false;
+                    html5QrcodeCalificar = null;
+                    crearYActivarEscaner();
                 });
             } else {
-                iniciarNuevoEscaner();
+                crearYActivarEscaner();
             }
         }
 
-        function iniciarNuevoEscaner() {
-            console.log('Iniciando escáner de calificaciones...');
-            html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
+        function crearYActivarEscaner() {
+            console.log('Creando nueva instancia del escáner...');
+            
+            try {
+                html5QrcodeCalificar = new Html5Qrcode("readerCalificar");
+                console.log('Instancia creada exitosamente');
+            } catch (err) {
+                console.error('Error al crear instancia:', err);
+                showAlert('❌ Error al crear escáner', 'error');
+                return;
+            }
+
+            const config = {
+                fps: 20,
+                qrbox: { width: 300, height: 300 }
+            };
+
+            console.log('Configuración del escáner:', config);
 
             html5QrcodeCalificar.start(
                 { facingMode: "environment" },
-                { fps: 20, qrbox: 300 },
-                (decodedText) => {
-                    console.log('QR detectado:', decodedText);
-                    const data = decodedText.split(',');
-                    console.log('Data parseada:', data);
-                    if (data.length >= 6) {
-                        console.log('Datos válidos, reproduciendo sonido...');
-                        // Reproducir sonido
-                        playBeep();
-                        handleScannedStudent(data);
-                    } else {
-                        console.log('Datos inválidos, menos de 6 campos');
-                        showAlert('❌ QR inválido: ' + decodedText, 'error');
-                    }
-                }
+                config,
+                onScanSuccess,
+                onScanFailure
             ).then(() => {
-                console.log('Escáner iniciado exitosamente');
+                console.log('✅ Escáner iniciado exitosamente');
+                scannerActivo = true;
                 document.getElementById('startCalificarBtn').disabled = true;
                 document.getElementById('stopCalificarBtn').disabled = false;
             }).catch(err => {
-                console.error("Error al iniciar escáner:", err);
-                showAlert('❌ Error al iniciar escáner: ' + err.message, 'error');
+                console.error('❌ Error al iniciar escáner:', err);
+                showAlert('❌ Error: ' + err.message, 'error');
                 document.getElementById('startCalificarBtn').disabled = false;
                 document.getElementById('stopCalificarBtn').disabled = true;
+                scannerActivo = false;
             });
         }
 
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log('🎯 QR DETECTADO:', decodedText);
+            console.log('Resultado completo:', decodedResult);
+            
+            const data = decodedText.split(',');
+            console.log('Datos parseados:', data);
+            console.log('Cantidad de campos:', data.length);
+            
+            if (data.length >= 6) {
+                console.log('✅ Formato válido');
+                playBeep();
+                handleScannedStudent(data);
+            } else {
+                console.log('❌ Formato inválido - Se esperaban 6 campos');
+                showAlert('❌ QR inválido: formato incorrecto', 'error');
+            }
+        }
+
+        function onScanFailure(error) {
+            // No hacer nada - esto se llama muchas veces mientras busca el QR
+        }
+
         function stopCalificarScanner() {
-            if (html5QrcodeCalificar) {
+            console.log('Deteniendo escáner...');
+            if (html5QrcodeCalificar && scannerActivo) {
                 html5QrcodeCalificar.stop().then(() => {
+                    console.log('Escáner detenido');
+                    scannerActivo = false;
                     document.getElementById('startCalificarBtn').disabled = false;
                     document.getElementById('stopCalificarBtn').disabled = true;
-                }).catch(() => {});
+                }).catch(err => {
+                    console.error('Error al detener:', err);
+                    scannerActivo = false;
+                    document.getElementById('startCalificarBtn').disabled = false;
+                    document.getElementById('stopCalificarBtn').disabled = true;
+                });
             }
         }
 
