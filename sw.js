@@ -1,5 +1,5 @@
 // Service Worker para funcionamiento OFFLINE
-const CACHE_NAME = 'asistencia-qr-v1';
+const CACHE_NAME = 'asistencia-qr-v2'; // VERSIÓN ACTUALIZADA
 const urlsToCache = [
   './',
   './index.html',
