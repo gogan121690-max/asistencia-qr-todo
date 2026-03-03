@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisión de Asistencia</title>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .date-info {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 1.2em;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .stat-card.total { border-left: 4px solid #667eea; }
+        .stat-card.present { border-left: 4px solid #28a745; }
+        .stat-card.absent { border-left: 4px solid #dc3545; }
+        .stat-card.percentage { border-left: 4px solid #ffc107; }
+
+        .stat-card.total .stat-number { color: #667eea; }
+        .stat-card.present .stat-number { color: #28a745; }
+        .stat-card.absent .stat-number { color: #dc3545; }
+        .stat-card.percentage .stat-number { color: #ffc107; }
+
+        .content {
+            padding: 30px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        th.center {
+            text-align: center;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        td {
+            padding: 15px;
+        }
+
+        td.center {
+            text-align: center;
+        }
+
+        .status-icon {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .present-icon {
+            color: #28a745;
+        }
+
+        .absent-icon {
+            color: #dc3545;
+        }
+
+        .time-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .alert.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .alert.success {
+            background: #28a745;
+        }
+
+        .alert.error {
+            background: #dc3545;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .form-group {
+                width: 100%;
+            }
+
+            table {
+                font-size: 0.9em;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="alert" class="alert"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>📋 Revisión de Asistencia del Día</h1>
+            <div class="date-info" id="currentDate"></div>
+        </div>
+
+        <div class="controls">
+            <div class="form-group">
+                <label>Seleccionar Lista:</label>
+                <select id="listSelect" onchange="loadAsistencia()">
+                    <option value="">-- Todas las listas --</option>
+                </select>
+            </div>
+            <button class="btn" onclick="refreshData()">🔄 Actualizar</button>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card total">
+                <div class="stat-label">Total de Alumnos</div>
+                <div class="stat-number" id="statTotal">0</div>
+            </div>
+            <div class="stat-card present">
+                <div class="stat-label">Asistieron</div>
+                <div class="stat-number" id="statPresent">0</div>
+            </div>
+            <div class="stat-card absent">
+                <div class="stat-label">Faltaron</div>
+                <div class="stat-number" id="statAbsent">0</div>
+            </div>
+            <div class="stat-card percentage">
+                <div class="stat-label">% Asistencia</div>
+                <div class="stat-number" id="statPercentage">0%</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="tableContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSKcyeDVOZRw2CkMrGapYymdguYllJta4",
+            authDomain: "asistencia-qr-38271.firebaseapp.com",
+            projectId: "asistencia-qr-38271",
+            storageBucket: "asistencia-qr-38271.firebasestorage.app",
+            messagingSenderId: "749102163562",
+            appId: "1:749102163562:web:b9aac331a24e17c9e78653"
+        };
+
+        let db;
+        let listas = {};
+        let asistenciasHoy = [];
+        const hoy = new Date().toLocaleDateString('es-MX');
+
+        // Inicializar Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log('Firebase conectado');
+            loadData();
+        } catch (err) {
+            console.error("Error al conectar Firebase:", err);
+            showAlert('Error al conectar con Firebase', 'error');
+        }
+
+        // Mostrar fecha actual
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('es-MX', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        async function loadData() {
+            await loadListas();
+            await loadAsistenciasHoy();
+            displayAsistencia();
+        }
+
+        async function loadListas() {
+            try {
+                const snapshot = await db.collection('listas').get();
+                listas = {};
+                
+                snapshot.forEach(doc => {
+                    listas[doc.id] = doc.data().alumnos || [];
+                });
+
+                // Llenar selector de listas
+                const select = document.getElementById('listSelect');
+                select.innerHTML = '<option value="">-- Todas las listas --</option>';
+                
+                Object.keys(listas).sort().forEach(listaName => {
+                    const option = document.createElement('option');
+                    option.value = listaName;
+                    option.textContent = listaName;
+                    select.appendChild(option);
+                });
+
+                console.log('Listas cargadas:', Object.keys(listas).length);
+            } catch (err) {
+                console.error("Error al cargar listas:", err);
+            }
+        }
+
+        async function loadAsistenciasHoy() {
+            try {
+                const snapshot = await db.collection('asistencias')
+                    .where('fecha', '==', hoy)
+                    .get();
+                
+                asistenciasHoy = [];
+                snapshot.forEach(doc => {
+                    asistenciasHoy.push(doc.data());
+                });
+
+                console.log('Asistencias hoy:', asistenciasHoy.length);
+            } catch (err) {
+                console.error("Error al cargar asistencias:", err);
+                asistenciasHoy = [];
+            }
+        }
+
+        function loadAsistencia() {
+            displayAsistencia();
+        }
+
+        function displayAsistencia() {
+            const selectedList = document.getElementById('listSelect').value;
+            const container = document.getElementById('tableContainer');
+            
+            // Obtener todos los alumnos
+            let todosAlumnos = [];
+            
+            if (selectedList) {
+                // Solo la lista seleccionada
+                todosAlumnos = listas[selectedList] || [];
+            } else {
+                // Todas las listas
+                Object.values(listas).forEach(alumnos => {
+                    todosAlumnos = todosAlumnos.concat(alumnos);
+                });
+            }
+
+            // Eliminar duplicados
+            const alumnosUnicos = [];
+            const vistos = new Set();
+            
+            todosAlumnos.forEach(alumno => {
+                const key = `${alumno.apellidoPaterno}_${alumno.apellidoMaterno}_${alumno.nombre}`;
+                if (!vistos.has(key)) {
+                    vistos.add(key);
+                    alumnosUnicos.push(alumno);
+                }
+            });
+
+            // Ordenar alfabéticamente
+            alumnosUnicos.sort((a, b) => {
+                const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
+                const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
+                return nameA.localeCompare(nameB, 'es');
+            });
+
+            // Calcular estadísticas
+            let totalAlumnos = alumnosUnicos.length;
+            let asistieron = 0;
+            let faltaron = 0;
+
+            if (totalAlumnos === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p style="font-size: 1.2em;">📭 No hay alumnos registrados</p>
+                        <p style="margin-top: 10px;">Las listas se sincronizan desde la App de Asistencia</p>
+                    </div>
+                `;
+                updateStats(0, 0, 0, 0);
+                return;
+            }
+
+            // Crear tabla
+            let html = '<div class="table-wrapper"><table>';
+            html += '<thead><tr>';
+            html += '<th>No.</th>';
+            html += '<th>Nombre Completo</th>';
+            html += '<th>Grado</th>';
+            html += '<th>Grupo</th>';
+            html += '<th class="center">Estado</th>';
+            html += '<th class="center">Hora</th>';
+            html += '</tr></thead><tbody>';
+
+            alumnosUnicos.forEach((alumno, index) => {
+                const nombreCompleto = `${alumno.apellidoPaterno} ${alumno.apellidoMaterno} ${alumno.nombre}`;
+                
+                // Buscar si asistió hoy
+                const asistio = asistenciasHoy.find(a => 
+                    a.nombre === alumno.nombre &&
+                    a.apellidoPaterno === alumno.apellidoPaterno &&
+                    a.apellidoMaterno === alumno.apellidoMaterno
+                );
+
+                if (asistio) {
+                    asistieron++;
+                } else {
+                    faltaron++;
+                }
+
+                html += '<tr>';
+                html += `<td>${index + 1}</td>`;
+                html += `<td>${nombreCompleto}</td>`;
+                html += `<td>${alumno.grado}°</td>`;
+                html += `<td>${alumno.grupo}</td>`;
+                html += `<td class="center">`;
+                
+                if (asistio) {
+                    html += '<span class="status-icon present-icon">✅</span>';
+                } else {
+                    html += '<span class="status-icon absent-icon">❌</span>';
+                }
+                
+                html += '</td>';
+                html += `<td class="center">`;
+                
+                if (asistio) {
+                    html += `<span class="time-badge">${asistio.hora}</span>`;
+                } else {
+                    html += '<span style="color: #999;">-</span>';
+                }
+                
+                html += '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+
+            // Actualizar estadísticas
+            const porcentaje = totalAlumnos > 0 ? ((asistieron / totalAlumnos) * 100).toFixed(1) : 0;
+            updateStats(totalAlumnos, asistieron, faltaron, porcentaje);
+        }
+
+        function updateStats(total, present, absent, percentage) {
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statPresent').textContent = present;
+            document.getElementById('statAbsent').textContent = absent;
+            document.getElementById('statPercentage').textContent = percentage + '%';
+        }
+
+        async function refreshData() {
+            showAlert('Actualizando datos...', 'success');
+            await loadData();
+            showAlert('Datos actualizados', 'success');
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
