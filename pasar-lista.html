@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pasar Lista - QR</title>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <!-- Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .date-info {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .scanner-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-card.total { border-left: 4px solid #667eea; }
+        .stat-card.present { border-left: 4px solid #28a745; }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .stat-card.total .stat-number { color: #667eea; }
+        .stat-card.present .stat-number { color: #28a745; }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        td {
+            padding: 12px 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .alert.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .alert.success {
+            background: #28a745;
+        }
+
+        .alert.error {
+            background: #dc3545;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.5em; }
+            .content { padding: 20px; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            table { font-size: 0.9em; }
+            th, td { padding: 10px; }
+        }
+    </style>
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Pasar Lista QR">
+</head>
+<body>
+    <div id="alert" class="alert"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>✅ Pasar Lista con QR</h1>
+            <div class="date-info" id="currentDate"></div>
+        </div>
+
+        <div class="content">
+            <div class="form-group">
+                <label>Filtrar por Lista (Opcional):</label>
+                <select id="groupFilter">
+                    <option value="">Todas las listas</option>
+                </select>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card total">
+                    <div class="stat-label">Total Hoy</div>
+                    <div class="stat-number" id="statTotal">0</div>
+                </div>
+                <div class="stat-card present">
+                    <div class="stat-label">Asistieron</div>
+                    <div class="stat-number" id="statPresent">0</div>
+                </div>
+            </div>
+
+            <div id="reader"></div>
+
+            <div class="scanner-controls">
+                <button class="btn" id="startBtn" onclick="startScanner()">▶️ Iniciar Escáner</button>
+                <button class="btn btn-secondary" id="stopBtn" onclick="stopScanner()" disabled>⏹️ Detener</button>
+                <button class="btn btn-success" onclick="exportToExcel()">📥 Exportar Excel</button>
+            </div>
+
+            <div class="table-wrapper">
+                <div id="recordsTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSKcyeDVOZRw2CkMrGapYymdguYllJta4",
+            authDomain: "asistencia-qr-38271.firebaseapp.com",
+            projectId: "asistencia-qr-38271",
+            storageBucket: "asistencia-qr-38271.firebasestorage.app",
+            messagingSenderId: "749102163562",
+            appId: "1:749102163562:web:b9aac331a24e17c9e78653"
+        };
+
+        let db;
+        let html5QrCode = null;
+        let attendanceRecords = [];
+        let savedLists = {};
+        let isFirebaseEnabled = false;
+        let lastScannedQR = '';
+        let lastScanTime = 0;
+        const SCAN_DELAY = 500;
+
+        // Inicializar Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            isFirebaseEnabled = true;
+            console.log('Firebase conectado');
+            loadFromFirebase();
+        } catch (err) {
+            console.error("Error Firebase:", err);
+            loadFromLocalStorage();
+        }
+
+        // Cargar desde localStorage
+        function loadFromLocalStorage() {
+            attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            savedLists = JSON.parse(localStorage.getItem('savedLists') || '{}');
+            updateGroupFilter();
+            displayRecords();
+        }
+
+        // Cargar desde Firebase
+        async function loadFromFirebase() {
+            try {
+                // Cargar listas
+                const listasSnapshot = await db.collection('listas').get();
+                savedLists = {};
+                listasSnapshot.forEach(doc => {
+                    savedLists[doc.id] = doc.data().alumnos || [];
+                });
+                localStorage.setItem('savedLists', JSON.stringify(savedLists));
+
+                // Cargar asistencias
+                const today = new Date().toLocaleDateString('es-MX');
+                const asistenciasSnapshot = await db.collection('asistencias')
+                    .where('fecha', '==', today)
+                    .get();
+                
+                attendanceRecords = [];
+                asistenciasSnapshot.forEach(doc => {
+                    attendanceRecords.push(doc.data());
+                });
+                localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+
+                updateGroupFilter();
+                displayRecords();
+            } catch (err) {
+                console.error("Error al cargar de Firebase:", err);
+                loadFromLocalStorage();
+            }
+        }
+
+        // Función para reproducir sonido de ÉXITO
+        function playSuccessBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                const osc1 = audioContext.createOscillator();
+                const gain1 = audioContext.createGain();
+                osc1.connect(gain1);
+                gain1.connect(audioContext.destination);
+                osc1.frequency.value = 1000;
+                osc1.type = 'sine';
+                gain1.gain.setValueAtTime(1.0, audioContext.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                osc1.start(audioContext.currentTime);
+                osc1.stop(audioContext.currentTime + 0.1);
+                
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                osc2.frequency.value = 1200;
+                osc2.type = 'sine';
+                gain2.gain.setValueAtTime(1.0, audioContext.currentTime + 0.12);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.22);
+                osc2.start(audioContext.currentTime + 0.12);
+                osc2.stop(audioContext.currentTime + 0.22);
+            } catch (e) {
+                console.log('No se pudo reproducir sonido:', e);
+            }
+        }
+
+        // Función para reproducir sonido de ERROR
+        function playErrorBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                for (let i = 0; i < 3; i++) {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.frequency.value = 400;
+                    osc.type = 'square';
+                    const startTime = audioContext.currentTime + (i * 0.15);
+                    gain.gain.setValueAtTime(1.0, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+                    osc.start(startTime);
+                    osc.stop(startTime + 0.1);
+                }
+            } catch (e) {
+                console.log('No se pudo reproducir sonido:', e);
+            }
+        }
+
+        // Mostrar fecha actual
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('es-MX', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        function updateGroupFilter() {
+            const select = document.getElementById('groupFilter');
+            select.innerHTML = '<option value="">Todas las listas</option>';
+            
+            Object.keys(savedLists).sort().forEach(listName => {
+                const option = document.createElement('option');
+                option.value = listName;
+                option.textContent = listName;
+                select.appendChild(option);
+            });
+        }
+
+        function startScanner() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            
+            const selectedGroup = document.getElementById('groupFilter').value;
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 20, qrbox: 300 },
+                (text) => {
+                    const now = Date.now();
+                    if (text === lastScannedQR && now - lastScanTime < SCAN_DELAY) {
+                        return;
+                    }
+                    lastScannedQR = text;
+                    lastScanTime = now;
+                    
+                    const data = text.split(',');
+                    if (data.length === 6) {
+                        const [apellidoPaterno, apellidoMaterno, nombre, grado, grupo, escuela] = data;
+                        
+                        // Verificar si está en la lista seleccionada
+                        if (selectedGroup) {
+                            const alumnosEnLista = savedLists[selectedGroup] || [];
+                            const alumnoEnLista = alumnosEnLista.find(a => 
+                                a.nombre === nombre &&
+                                a.apellidoPaterno === apellidoPaterno &&
+                                a.apellidoMaterno === apellidoMaterno
+                            );
+                            
+                            if (!alumnoEnLista) {
+                                playErrorBeep();
+                                showAlert(`❌ Este alumno NO está en la lista "${selectedGroup}"`, 'error');
+                                return;
+                            }
+                        }
+                        
+                        const today = new Date();
+                        const todayStr = today.toLocaleDateString('es-MX');
+                        
+                        const yaRegistrado = attendanceRecords.find(r => 
+                            r.nombre === nombre &&
+                            r.apellidoPaterno === apellidoPaterno &&
+                            r.apellidoMaterno === apellidoMaterno &&
+                            r.fecha === todayStr
+                        );
+                        
+                        if (yaRegistrado) {
+                            playErrorBeep();
+                            showAlert(`⚠️ ${apellidoPaterno} ${apellidoMaterno} ${nombre} ya tomó asistencia hoy a las ${yaRegistrado.hora}`, 'error');
+                            return;
+                        }
+                        
+                        const record = {
+                            nombre,
+                            apellidoPaterno,
+                            apellidoMaterno,
+                            grado,
+                            grupo,
+                            escuela,
+                            fecha: todayStr,
+                            hora: today.toLocaleTimeString('es-MX')
+                        };
+                        
+                        attendanceRecords.push(record);
+                        localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+                        
+                        // Guardar en Firebase
+                        if (isFirebaseEnabled) {
+                            const docId = `${apellidoPaterno}_${apellidoMaterno}_${nombre}_${todayStr}`.replace(/\s+/g, '_');
+                            db.collection('asistencias').doc(docId).set(record)
+                                .catch(err => console.error("Error Firebase:", err));
+                        }
+                        
+                        playSuccessBeep();
+                        showAlert(`✅ ${apellidoPaterno} ${apellidoMaterno} ${nombre}`, 'success');
+                        displayRecords();
+                    }
+                }
+            ).then(() => {
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+            }).catch(err => {
+                console.error("Error al iniciar escáner:", err);
+                showAlert('Error al iniciar escáner', 'error');
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                }).catch(() => {});
+            }
+        }
+
+        function displayRecords() {
+            const today = new Date().toLocaleDateString('es-MX');
+            const todayRecords = attendanceRecords.filter(r => r.fecha === today);
+            
+            const container = document.getElementById('recordsTable');
+            
+            if (todayRecords.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>📭 No hay asistencias registradas hoy</p></div>';
+                updateStats(0, 0);
+                return;
+            }
+            
+            const sorted = [...todayRecords].sort((a, b) => {
+                const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
+                const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
+                return nameA.localeCompare(nameB, 'es');
+            });
+            
+            let html = '<table><thead><tr>';
+            html += '<th>No.</th><th>Nombre Completo</th><th>Grado</th><th>Grupo</th><th>Hora</th>';
+            html += '</tr></thead><tbody>';
+            
+            sorted.forEach((record, index) => {
+                const nombreCompleto = `${record.apellidoPaterno} ${record.apellidoMaterno} ${record.nombre}`;
+                html += `<tr>`;
+                html += `<td>${index + 1}</td>`;
+                html += `<td>${nombreCompleto}</td>`;
+                html += `<td>${record.grado}°</td>`;
+                html += `<td>${record.grupo}</td>`;
+                html += `<td>${record.hora}</td>`;
+                html += `</tr>`;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+            
+            updateStats(todayRecords.length, todayRecords.length);
+        }
+
+        function updateStats(total, present) {
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statPresent').textContent = present;
+        }
+
+        function exportToExcel() {
+            const today = new Date().toLocaleDateString('es-MX');
+            const todayRecords = attendanceRecords.filter(r => r.fecha === today);
+            
+            if (todayRecords.length === 0) {
+                showAlert('No hay registros para exportar', 'error');
+                return;
+            }
+            
+            const sorted = [...todayRecords].sort((a, b) => {
+                const nameA = `${a.apellidoPaterno} ${a.apellidoMaterno} ${a.nombre}`;
+                const nameB = `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`;
+                return nameA.localeCompare(nameB, 'es');
+            });
+            
+            const data = sorted.map((r, i) => ({
+                'No.': i + 1,
+                'Apellido Paterno': r.apellidoPaterno,
+                'Apellido Materno': r.apellidoMaterno,
+                'Nombre': r.nombre,
+                'Grado': r.grado,
+                'Grupo': r.grupo,
+                'Escuela': r.escuela,
+                'Fecha': r.fecha,
+                'Hora': r.hora
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Asistencias');
+            
+            const fecha = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Asistencias_${fecha}.xlsx`);
+            
+            showAlert('✅ Exportado a Excel', 'success');
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 800);
+        }
+
+        // Cargar datos al iniciar
+        if (!isFirebaseEnabled) {
+            loadFromLocalStorage();
+        }
+    </script>
+    
+    <!-- Service Worker para funcionamiento OFFLINE -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado');
+                    })
+                    .catch(error => {
+                        console.log('❌ Error Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
